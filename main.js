@@ -38,6 +38,7 @@ const stepSettings = [
     title: "2020 baseline",
     subtitle:
       "The map starts at the baseline year. Future values are compared with this starting point.",
+    highlight: null,
   },
   {
     year: 2020,
@@ -46,6 +47,7 @@ const stepSettings = [
     title: "2020 baseline: no change yet",
     subtitle:
       "Using a baseline helps us ask a simple question: how much does each place change from here?",
+    highlight: null,
   },
   {
     year: 2070,
@@ -54,6 +56,7 @@ const stepSettings = [
     title: "Average temperature change by 2070",
     subtitle:
       "By 2070, average warming becomes visible across many states under medium emissions.",
+    highlight: null,
   },
   {
     year: 2070,
@@ -62,6 +65,7 @@ const stepSettings = [
     title: "Higher emissions, stronger average warming",
     subtitle:
       "The same year can look different under different emissions futures.",
+    highlight: null,
   },
   {
     year: 2070,
@@ -70,6 +74,7 @@ const stepSettings = [
     title: "Additional 35°C+ days by 2070",
     subtitle:
       "Averages smooth over extreme days. This map counts how many more days exceed 35°C compared with 2020.",
+    highlight: null,
   },
   {
     year: 2070,
@@ -78,6 +83,7 @@ const stepSettings = [
     title: "Extreme heat does not rise evenly",
     subtitle:
       "Some states gain many more extreme hot days than others, even when average warming may look similar.",
+    highlight: "top",
   },
   {
     year: 2070,
@@ -86,6 +92,7 @@ const stepSettings = [
     title: "High emissions make the heat story sharper",
     subtitle:
       "Under higher emissions, the change is not only a warmer average. It can mean more days crossing a heat threshold.",
+    highlight: "top",
   },
   {
     year: 2070,
@@ -94,6 +101,7 @@ const stepSettings = [
     title: "Explore the map yourself",
     subtitle:
       "Use the controls to compare year, scenario, and metric. Hover over states to see details.",
+    highlight: null,
   },
 ];
 
@@ -112,20 +120,21 @@ const svg = d3.select("#map");
 const title = d3.select("#chart-title");
 const subtitle = d3.select("#chart-subtitle");
 const stateCard = d3.select("#state-card");
+const stickyViz = d3.select(".sticky-viz");
 
 const scenarioSelect = d3.select("#scenario-select");
 const yearSlider = d3.select("#year-slider");
 const yearLabel = d3.select("#year-label");
 const metricSelect = d3.select("#metric-select");
 
-const width = 900;
-const height = 520;
+const width = 920;
+const height = 540;
 
 svg.attr("viewBox", `0 0 ${width} ${height}`);
 
 const projection = d3.geoAlbersUsa()
   .translate([width / 2, height / 2])
-  .scale(1120);
+  .scale(1160);
 
 const path = d3.geoPath(projection);
 
@@ -150,7 +159,6 @@ async function init() {
 
 function mergeClimateRows(tasRows, heatRows) {
   const key = (d) => `${normalizeStateName(d.state)}|${d.year}|${d.scenario}`;
-
   const tasMap = new Map(tasRows.map((d) => [key(d), d]));
 
   return heatRows.map((heat) => {
@@ -192,7 +200,7 @@ function setupScroll() {
   scroller
     .setup({
       step: ".step",
-      offset: 0.6,
+      offset: 0.55,
       debug: false,
     })
     .onStepEnter((response) => {
@@ -221,7 +229,17 @@ function updateStep(step) {
   d3.select("body").classed("explore-mode", step === 7);
 
   syncControls();
+  pulseViz();
   updateMap();
+}
+
+function pulseViz() {
+  stickyViz.classed("step-pulse", false);
+
+  // Force reflow so animation can restart.
+  void stickyViz.node().offsetWidth;
+
+  stickyViz.classed("step-pulse", true);
 }
 
 function updateManualTitle() {
@@ -256,6 +274,7 @@ function updateMap() {
     .filter((v) => Number.isFinite(v));
 
   const color = getColorScale(metric, values);
+  const topStates = getTopStates(filtered, metric, 4);
 
   mapG.selectAll("path")
     .data(statesGeo.features, getFeatureStateName)
@@ -263,7 +282,7 @@ function updateMap() {
       (enter) => enter.append("path")
         .attr("class", "state")
         .attr("d", path)
-        .attr("fill", "#eee")
+        .attr("fill", "#eeeeee")
         .on("mousemove", function (event, feature) {
           const stateName = getFeatureStateName(feature);
           const row = dataByState.get(normalizeStateName(stateName));
@@ -272,8 +291,16 @@ function updateMap() {
       (update) => update,
       (exit) => exit.remove()
     )
+    .classed("highlighted", (feature) => {
+      const setting = stepSettings[currentStep];
+      if (setting.highlight !== "top") return false;
+
+      const stateName = normalizeStateName(getFeatureStateName(feature));
+      return topStates.has(stateName);
+    })
     .transition()
-    .duration(650)
+    .duration(750)
+    .ease(d3.easeCubicOut)
     .attr("fill", (feature) => {
       const stateName = getFeatureStateName(feature);
       const row = dataByState.get(normalizeStateName(stateName));
@@ -281,9 +308,17 @@ function updateMap() {
 
       if (!Number.isFinite(value)) return "#eeeeee";
       return color(value);
+    })
+    .attr("opacity", (feature) => {
+      const setting = stepSettings[currentStep];
+      if (setting.highlight !== "top") return 1;
+
+      const stateName = normalizeStateName(getFeatureStateName(feature));
+      return topStates.has(stateName) ? 1 : 0.55;
     });
 
   drawLegend(color, metric);
+  updateMapNote(filtered, metric);
 }
 
 function getColorScale(metric, values) {
@@ -363,6 +398,31 @@ function drawLegend(color, metric) {
     .attr("font-size", 11)
     .attr("fill", "#555")
     .text(formatValue(end, unit));
+}
+
+function updateMapNote(filtered, metric) {
+  const maxRow = filtered
+    .filter((d) => Number.isFinite(d[metric]))
+    .sort((a, b) => d3.descending(a[metric], b[metric]))[0];
+
+  if (!maxRow) {
+    d3.select("#map-note").text("Hover over a state to see details.");
+    return;
+  }
+
+  d3.select("#map-note").text(
+    `Highest value: ${maxRow.state}, ${formatValue(maxRow[metric], metricUnits[metric])}.`
+  );
+}
+
+function getTopStates(rows, metric, n) {
+  const top = rows
+    .filter((d) => Number.isFinite(d[metric]))
+    .sort((a, b) => d3.descending(a[metric], b[metric]))
+    .slice(0, n)
+    .map((d) => normalizeStateName(d.state));
+
+  return new Set(top);
 }
 
 function showStateCard(stateName, row, metric) {

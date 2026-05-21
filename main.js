@@ -128,13 +128,13 @@ const yearLabel = d3.select("#year-label");
 const metricSelect = d3.select("#metric-select");
 
 const width = 920;
-const height = 540;
+const height = 500;
 
 svg.attr("viewBox", `0 0 ${width} ${height}`);
 
 const projection = d3.geoAlbersUsa()
-  .translate([width / 2, height / 2])
-  .scale(1160);
+  .translate([width / 2, height / 2 + 10])
+  .scale(1080);
 
 const path = d3.geoPath(projection);
 
@@ -200,7 +200,7 @@ function setupScroll() {
   scroller
     .setup({
       step: ".step",
-      offset: 0.55,
+      offset: 0.5,
       debug: false,
     })
     .onStepEnter((response) => {

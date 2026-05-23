@@ -1,10 +1,8 @@
-const DATA_PATH = "data/";
-
-const files = {
-  states: `${DATA_PATH}us_states.geojson`,
-  stateTas: `${DATA_PATH}state_annual_tas_cmip6_2020_2070.csv`,
-  stateHeat: `${DATA_PATH}state_annual_extreme_heat_cmip6_2020_2070.csv`,
-};
+// ============================================================
+// DSC 106 Final Project story controller
+// Current version: story skeleton with placeholders.
+// Next step: replace placeholder panels with D3 visualizations.
+// ============================================================
 
 const scenarioLabels = {
   ssp126: "Low emissions",
@@ -18,36 +16,16 @@ const metricLabels = {
   hot_days_35c: "Total 35°C+ days",
 };
 
-const metricShortLabels = {
-  tas_change_from_2020_c: "Average warming",
-  hot_days_35c_change_from_2020: "Additional 35°C+ days",
-  hot_days_35c: "Total 35°C+ days",
-};
-
-const metricUnits = {
-  tas_change_from_2020_c: "°C",
-  hot_days_35c_change_from_2020: "days",
-  hot_days_35c: "days",
-};
-
 const stepSettings = [
   {
     year: 2020,
     scenario: "ssp245",
     metric: "tas_change_from_2020_c",
-    title: "2020 baseline",
+    title: "Start with average temperature",
     subtitle:
-      "The map starts at the baseline year. Future values are compared with this starting point.",
-    highlight: null,
-  },
-  {
-    year: 2020,
-    scenario: "ssp245",
-    metric: "tas_change_from_2020_c",
-    title: "2020 baseline: no change yet",
-    subtitle:
-      "Using a baseline helps us ask a simple question: how much does each place change from here?",
-    highlight: null,
+      "The map starts at 2020 as a baseline. Future values will be compared with this starting point.",
+    placeholder: "[ US choropleth placeholder: 2020 baseline average temperature change ]",
+    note: "Baseline view: no change yet, because 2020 is the comparison year.",
   },
   {
     year: 2070,
@@ -56,7 +34,8 @@ const stepSettings = [
     title: "Average temperature change by 2070",
     subtitle:
       "By 2070, average warming becomes visible across many states under medium emissions.",
-    highlight: null,
+    placeholder: "[ US choropleth placeholder: 2070 average warming under medium emissions ]",
+    note: "Big-picture view: average warming is broad, but still abstract.",
   },
   {
     year: 2070,
@@ -65,16 +44,28 @@ const stepSettings = [
     title: "Higher emissions, stronger average warming",
     subtitle:
       "The same year can look different under different emissions futures.",
-    highlight: null,
+    placeholder: "[ US choropleth placeholder: 2070 average warming under high emissions ]",
+    note: "Scenario view: higher emissions make the average-warming pattern stronger.",
+  },
+  {
+    year: 2070,
+    scenario: "ssp585",
+    metric: "tas_change_from_2020_c",
+    title: "But averages hide daily experience",
+    subtitle:
+      "People do not experience climate as an annual average. They experience individual days of heat.",
+    placeholder: "[ Transition placeholder: average map pauses before switching metric ]",
+    note: "Story turn: the map is about to switch from average warming to daily heat thresholds.",
   },
   {
     year: 2070,
     scenario: "ssp245",
     metric: "hot_days_35c_change_from_2020",
-    title: "Additional 35°C+ days by 2070",
+    title: "Count extreme hot days instead",
     subtitle:
-      "Averages smooth over extreme days. This map counts how many more days exceed 35°C compared with 2020.",
-    highlight: null,
+      "This map counts how many more days exceed 35°C compared with 2020.",
+    placeholder: "[ US choropleth placeholder: additional 35°C+ days under medium emissions ]",
+    note: "Metric switch: daily hot-day counts make the risk easier to see and feel.",
   },
   {
     year: 2070,
@@ -82,17 +73,19 @@ const stepSettings = [
     metric: "hot_days_35c_change_from_2020",
     title: "Extreme heat does not rise evenly",
     subtitle:
-      "Some states gain many more extreme hot days than others, even when average warming may look similar.",
-    highlight: "top",
+      "Some states gain many more extreme hot days than others, even when average warming looks broad.",
+    placeholder: "[ US choropleth placeholder: top states highlighted for additional 35°C+ days ]",
+    note: "Highlight view: the largest increases would be emphasized here.",
   },
   {
     year: 2070,
     scenario: "ssp585",
     metric: "hot_days_35c_change_from_2020",
-    title: "High emissions make the heat story sharper",
+    title: "High emissions sharpen the daily-risk story",
     subtitle:
-      "Under higher emissions, the change is not only a warmer average. It can mean more days crossing a heat threshold.",
-    highlight: "top",
+      "Under higher emissions, the change can mean more days crossing an extreme heat threshold.",
+    placeholder: "[ US choropleth placeholder: additional 35°C+ days under high emissions ]",
+    note: "Daily-risk view: high emissions make the hot-day story stronger.",
   },
   {
     year: 2070,
@@ -100,97 +93,52 @@ const stepSettings = [
     metric: "hot_days_35c_change_from_2020",
     title: "Explore the map yourself",
     subtitle:
-      "Use the controls to compare year, scenario, and metric. Hover over states to see details.",
-    highlight: null,
+      "Use the controls to compare year, scenario, and metric. Later, hover over states to see details.",
+    placeholder: "[ Interactive US choropleth placeholder: user-controlled year, scenario, and metric ]",
+    note: "Explore mode: controls are now visible.",
   },
 ];
 
-let statesGeo;
-let stateData;
-
 let currentStep = 0;
-
 let currentState = {
   year: 2070,
   scenario: "ssp245",
   metric: "tas_change_from_2020_c",
 };
 
-const svg = d3.select("#map");
 const title = d3.select("#chart-title");
 const subtitle = d3.select("#chart-subtitle");
-const stateCard = d3.select("#state-card");
 const stickyViz = d3.select(".sticky-viz");
+const mapPlaceholder = d3.select("#main-map-placeholder span");
+const mapPlaceholderSub = d3.select("#main-map-placeholder small");
+const mapNote = d3.select("#map-note");
+const legend = d3.select("#legend");
+const stateCard = d3.select("#state-card");
 
 const scenarioSelect = d3.select("#scenario-select");
 const yearSlider = d3.select("#year-slider");
 const yearLabel = d3.select("#year-label");
 const metricSelect = d3.select("#metric-select");
 
-const width = 920;
-const height = 500;
-
-svg.attr("viewBox", `0 0 ${width} ${height}`);
-
-const projection = d3.geoAlbersUsa()
-  .translate([width / 2, height / 2 + 10])
-  .scale(1080);
-
-const path = d3.geoPath(projection);
-
-const mapG = svg.append("g");
-
-init();
-
-async function init() {
-  const [states, tasRows, heatRows] = await Promise.all([
-    d3.json(files.states),
-    d3.csv(files.stateTas, d3.autoType),
-    d3.csv(files.stateHeat, d3.autoType),
-  ]);
-
-  statesGeo = states;
-  stateData = mergeClimateRows(tasRows, heatRows);
-
-  setupControls();
-  setupScroll();
-  updateStep(0);
-}
-
-function mergeClimateRows(tasRows, heatRows) {
-  const key = (d) => `${normalizeStateName(d.state)}|${d.year}|${d.scenario}`;
-  const tasMap = new Map(tasRows.map((d) => [key(d), d]));
-
-  return heatRows.map((heat) => {
-    const tas = tasMap.get(key(heat)) || {};
-
-    return {
-      ...heat,
-      tas_c: tas.tas_c,
-      tas_2020_c: tas.tas_2020_c,
-      tas_change_from_2020_c: tas.tas_change_from_2020_c,
-    };
-  });
-}
+setupControls();
+setupScroll();
+updateStep(0);
 
 function setupControls() {
   scenarioSelect.on("change", (event) => {
     currentState.scenario = event.target.value;
-    updateManualTitle();
-    updateMap();
+    updateExploreView();
   });
 
   yearSlider.on("input", (event) => {
     currentState.year = +event.target.value;
     yearLabel.text(currentState.year);
-    updateManualTitle();
-    updateMap();
+    updateExploreView();
   });
 
   metricSelect.on("change", (event) => {
     currentState.metric = event.target.value;
-    updateManualTitle();
-    updateMap();
+    updateExploreView();
   });
 }
 
@@ -200,7 +148,7 @@ function setupScroll() {
   scroller
     .setup({
       step: ".step",
-      offset: 0.5,
+      offset: 0.55,
       debug: false,
     })
     .onStepEnter((response) => {
@@ -216,39 +164,29 @@ function setupScroll() {
 
 function updateStep(step) {
   currentStep = step;
-
   const setting = stepSettings[step];
+  if (!setting) return;
 
-  currentState.year = setting.year;
-  currentState.scenario = setting.scenario;
-  currentState.metric = setting.metric;
+  currentState = {
+    year: setting.year,
+    scenario: setting.scenario,
+    metric: setting.metric,
+  };
 
   title.text(setting.title);
   subtitle.text(setting.subtitle);
+  mapPlaceholder.text(setting.placeholder);
+  mapPlaceholderSub.text(
+    `${scenarioLabels[setting.scenario]} · ${setting.year} · ${metricLabels[setting.metric]}`
+  );
+  mapNote.text(setting.note);
+  legend.text(`[ legend: ${metricLabels[setting.metric]} ]`);
 
   d3.select("body").classed("explore-mode", step === 7);
 
   syncControls();
+  updateStateCard();
   pulseViz();
-  updateMap();
-}
-
-function pulseViz() {
-  stickyViz.classed("step-pulse", false);
-
-  // Force reflow so animation can restart.
-  void stickyViz.node().offsetWidth;
-
-  stickyViz.classed("step-pulse", true);
-}
-
-function updateManualTitle() {
-  if (currentStep !== 7) return;
-
-  title.text(`${metricLabels[currentState.metric]} in ${currentState.year}`);
-  subtitle.text(
-    `${scenarioLabels[currentState.scenario]} scenario. Hover over a state to compare average warming and extreme heat.`
-  );
 }
 
 function syncControls() {
@@ -258,219 +196,38 @@ function syncControls() {
   metricSelect.property("value", currentState.metric);
 }
 
-function updateMap() {
-  const filtered = stateData.filter((d) =>
-    d.year === currentState.year &&
-    d.scenario === currentState.scenario
+function updateExploreView() {
+  if (currentStep !== 7) return;
+
+  title.text(`${metricLabels[currentState.metric]} in ${currentState.year}`);
+  subtitle.text(
+    `${scenarioLabels[currentState.scenario]} scenario. Later, this view will update the choropleth map directly.`
   );
-
-  const dataByState = new Map(
-    filtered.map((d) => [normalizeStateName(d.state), d])
+  mapPlaceholder.text("[ Interactive US choropleth placeholder ]");
+  mapPlaceholderSub.text(
+    `${scenarioLabels[currentState.scenario]} · ${currentState.year} · ${metricLabels[currentState.metric]}`
   );
-
-  const metric = currentState.metric;
-  const values = filtered
-    .map((d) => d[metric])
-    .filter((v) => Number.isFinite(v));
-
-  const color = getColorScale(metric, values);
-  const topStates = getTopStates(filtered, metric, 4);
-
-  mapG.selectAll("path")
-    .data(statesGeo.features, getFeatureStateName)
-    .join(
-      (enter) => enter.append("path")
-        .attr("class", "state")
-        .attr("d", path)
-        .attr("fill", "#e3e8ea")
-        .on("mousemove", function (event, feature) {
-          const stateName = getFeatureStateName(feature);
-          const row = dataByState.get(normalizeStateName(stateName));
-          showStateCard(stateName, row, metric);
-        }),
-      (update) => update,
-      (exit) => exit.remove()
-    )
-    .classed("highlighted", (feature) => {
-      const setting = stepSettings[currentStep];
-      if (setting.highlight !== "top") return false;
-
-      const stateName = normalizeStateName(getFeatureStateName(feature));
-      return topStates.has(stateName);
-    })
-    .transition()
-    .duration(750)
-    .ease(d3.easeCubicOut)
-    .attr("fill", (feature) => {
-      const stateName = getFeatureStateName(feature);
-      const row = dataByState.get(normalizeStateName(stateName));
-      const value = row?.[metric];
-
-      if (!Number.isFinite(value)) return "#e3e8ea";
-      return color(value);
-    })
-    .attr("opacity", (feature) => {
-      const setting = stepSettings[currentStep];
-      if (setting.highlight !== "top") return 1;
-
-      const stateName = normalizeStateName(getFeatureStateName(feature));
-      return topStates.has(stateName) ? 1 : 0.55;
-    });
-
-  drawLegend(color, metric);
-  updateMapNote(filtered, metric);
+  mapNote.text("Explore mode: these controls are wired and ready for the real D3 map.");
+  legend.text(`[ legend: ${metricLabels[currentState.metric]} ]`);
+  updateStateCard();
 }
 
-function getColorScale(metric, values) {
-  if (metric === "tas_change_from_2020_c") {
-    const maxAbs = d3.max(values, (d) => Math.abs(d)) || 1;
-
-    return d3.scaleDiverging()
-      .domain([-maxAbs, 0, maxAbs])
-      .interpolator((t) => d3.interpolateRdBu(1 - t))
-      .clamp(true);
-  }
-
-  const maxValue = d3.max(values) || 1;
-
-  return d3.scaleSequential()
-    .domain([0, maxValue])
-    .interpolator(d3.interpolateYlOrRd)
-    .clamp(true);
-}
-
-function drawLegend(color, metric) {
-  const legendWidth = 280;
-  const legendHeight = 48;
-
-  const legend = d3.select("#legend")
-    .html("")
-    .append("svg")
-    .attr("width", legendWidth)
-    .attr("height", legendHeight);
-
-  const defs = legend.append("defs");
-  const gradientId = "legend-gradient";
-
-  const gradient = defs.append("linearGradient")
-    .attr("id", gradientId)
-    .attr("x1", "0%")
-    .attr("x2", "100%")
-    .attr("y1", "0%")
-    .attr("y2", "0%");
-
-  const domain = color.domain();
-  const start = domain[0];
-  const end = domain[domain.length - 1];
-
-  const stops = d3.range(0, 1.01, 0.1);
-
-  gradient.selectAll("stop")
-    .data(stops)
-    .join("stop")
-    .attr("offset", (d) => `${d * 100}%`)
-    .attr("stop-color", (d) => {
-      const value = start + d * (end - start);
-      return color(value);
-    });
-
-  legend.append("rect")
-    .attr("x", 8)
-    .attr("y", 8)
-    .attr("width", legendWidth - 16)
-    .attr("height", 12)
-    .attr("rx", 6)
-    .attr("fill", `url(#${gradientId})`);
-
-  const unit = metricUnits[metric];
-
-  legend.append("text")
-    .attr("x", 8)
-    .attr("y", 38)
-    .attr("font-size", 11)
-    .attr("fill", "#555")
-    .text(formatValue(start, unit));
-
-  legend.append("text")
-    .attr("x", legendWidth - 8)
-    .attr("y", 38)
-    .attr("text-anchor", "end")
-    .attr("font-size", 11)
-    .attr("fill", "#555")
-    .text(formatValue(end, unit));
-}
-
-function updateMapNote(filtered, metric) {
-  const maxRow = filtered
-    .filter((d) => Number.isFinite(d[metric]))
-    .sort((a, b) => d3.descending(a[metric], b[metric]))[0];
-
-  if (!maxRow) {
-    d3.select("#map-note").text("Hover over a state to see details.");
-    return;
-  }
-
-  d3.select("#map-note").text(
-    `Highest value: ${maxRow.state}, ${formatValue(maxRow[metric], metricUnits[metric])}.`
-  );
-}
-
-function getTopStates(rows, metric, n) {
-  const top = rows
-    .filter((d) => Number.isFinite(d[metric]))
-    .sort((a, b) => d3.descending(a[metric], b[metric]))
-    .slice(0, n)
-    .map((d) => normalizeStateName(d.state));
-
-  return new Set(top);
-}
-
-function showStateCard(stateName, row, metric) {
-  if (!row) {
-    stateCard.html(`
-      <h3>${stateName}</h3>
-      <p>No data available for this state.</p>
-    `);
-    return;
-  }
-
-  const metricValue = row[metric];
-  const avgWarming = row.tas_change_from_2020_c;
-  const hotDays = row.hot_days_35c;
-  const hotDaysChange = row.hot_days_35c_change_from_2020;
+function updateStateCard() {
+  const scenario = scenarioLabels[currentState.scenario];
+  const metric = metricLabels[currentState.metric];
 
   stateCard.html(`
-    <h3>${stateName}</h3>
-    <p><strong>${scenarioLabels[currentState.scenario]}</strong>, ${currentState.year}</p>
-    <p>${metricShortLabels[metric]}: <strong>${formatValue(metricValue, metricUnits[metric])}</strong></p>
-    <p>Average warming from 2020: <strong>${formatValue(avgWarming, "°C")}</strong></p>
-    <p>Total 35°C+ days: <strong>${formatValue(hotDays, "days")}</strong></p>
-    <p>Additional 35°C+ days from 2020: <strong>${formatValue(hotDaysChange, "days")}</strong></p>
+    <h3>State detail</h3>
+    <p><strong>${scenario}</strong>, ${currentState.year}</p>
+    <p>Current metric: <strong>${metric}</strong></p>
+    <p>Later, hovering or clicking a state will show average warming, additional 35°C+ days, and a daily-life sentence.</p>
   `);
 }
 
-function getFeatureStateName(feature) {
-  return (
-    feature.properties.state ||
-    feature.properties.NAME ||
-    feature.properties.name
-  );
-}
+function pulseViz() {
+  if (stickyViz.empty()) return;
 
-function normalizeStateName(name) {
-  return String(name).trim();
-}
-
-function formatValue(value, unit) {
-  if (!Number.isFinite(value)) return "N/A";
-
-  if (unit === "°C") {
-    return `${d3.format("+.2f")(value)} ${unit}`;
-  }
-
-  if (unit === "days") {
-    return `${d3.format("+.1f")(value)} ${unit}`;
-  }
-
-  return d3.format(".2f")(value);
+  stickyViz.classed("step-pulse", false);
+  void stickyViz.node().offsetWidth;
+  stickyViz.classed("step-pulse", true);
 }

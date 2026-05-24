@@ -35,8 +35,8 @@
               Scenario
               <select id="scenario-select">
                 <option value="ssp126">Low emissions</option>
-                <option value="ssp245" selected>Medium emissions</option>
-                <option value="ssp585">High emissions</option>
+                <option value="ssp245">Medium emissions</option>
+                <option value="ssp585" selected>High emissions</option>
               </select>
             </label>
 
@@ -57,6 +57,7 @@
         </div>
 
         <div class="chart-wrap">
+          <div id="map-year-overlay" class="map-year-overlay">2020</div>
           <svg id="main-chart" role="img" aria-label="Climate projection visualization"></svg>
         </div>
 
@@ -80,7 +81,7 @@
         <p class="step-number">02 · Baseline</p>
         <h2>Now place that trend on the map.</h2>
         <p>
-          We use 2020 as the baseline, then compare how average temperature changes across the United States.
+          We use 2020 as the baseline, then animate how average temperature changes across the United States under high emissions.
         </p>
       </article>
 
@@ -88,23 +89,24 @@
         <p class="step-number">03 · Future view</p>
         <h2>By 2070, the map gets warmer.</h2>
         <p>
-          Average warming becomes visible across many states, even before looking at individual hot days.
+          Under high emissions, average warming becomes visible across many states, even before looking at individual hot days.
         </p>
       </article>
 
-      <article class="step" data-step="3">
-        <p class="step-number">04 · Scenario</p>
-        <h2>Emissions change the picture.</h2>
+      <article class="step text-only-step" data-step="3">
+        <p class="step-number">04 · Hidden part</p>
+        <h2>Average temperature smooths the real situation.</h2>
         <p>
-          Under higher emissions, the same future year shows stronger warming across more of the country.
+          A yearly average blends comfortable days and extreme days into one number.<br />
+          But people experience heat as specific days.
         </p>
       </article>
 
       <article class="step" data-step="4">
-        <p class="step-number">05 · Daily experience</p>
-        <h2>A yearly average misses the hardest days.</h2>
+        <p class="step-number">05 · Compare</p>
+        <h2>Small average changes can hide larger daily changes.</h2>
         <p>
-          People experience heat as specific days: cancelled outdoor practice, longer AC use, or riskier outdoor work.
+          Average temperature rises gradually, but the number of extreme hot days can grow faster. Counting days makes the risk easier to feel.
         </p>
       </article>
 
@@ -118,17 +120,17 @@
 
       <article class="step" data-step="6">
         <p class="step-number">07 · Uneven risk</p>
-        <h2>The pattern becomes sharper.</h2>
+        <h2>Extreme heat days do not increase evenly.</h2>
         <p>
-          Some states gain many more extreme hot days than others, making the risk easier to compare.
+          By 2070, the largest increases appear in states that already sit near the 35&deg;C threshold. The same average-warming future can create very different daily heat risks.
         </p>
       </article>
 
       <article class="step" data-step="7">
-        <p class="step-number">08 · Higher emissions</p>
-        <h2>More warming means more risky days.</h2>
+        <p class="step-number">08 · Impact</p>
+        <h2>What would those extra hot days change?</h2>
         <p>
-          Under high emissions, the change is not only a warmer average. It is more days people have to live through.
+          This section will connect extra hot days to daily-life impacts such as outdoor work, school activities, AC use, and health risk.
         </p>
       </article>
 
@@ -208,9 +210,10 @@
         <p class="eyebrow">Next layer</p>
         <h3>Where do those hot days fall during the year?</h3>
         <p>
-          Extreme heat is not spread evenly across the year. The monthly view will show which months carry the most hot days.
+          Extreme heat is not spread evenly across the year. The monthly view shows which months carry the most hot days.
         </p>
       </div>
+
       <div class="monthly-chart-card">
         <svg id="monthly-chart" role="img" aria-label="Monthly extreme hot day bar chart"></svg>
       </div>
@@ -228,6 +231,7 @@
   <footer>
     <p>
       DSC 106 Final Project &middot; Data: CMIP6 climate projections &middot;
+      <a href="writeup.html">Read the writeup</a> &middot;
       <a href="https://github.com/SongSu-eight/warming-to-heat-risk">GitHub</a>
     </p>
   </footer>

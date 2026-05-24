@@ -44,91 +44,94 @@ const stepSettings = [
       "Average temperature changes gradually over time, especially under higher emissions.",
     note:
       "This line chart summarizes the national average across states before we look at where warming happens.",
-    highlight: null,
   },
   {
     view: "map",
     year: 2020,
-    scenario: "ssp245",
+    scenario: "ssp585",
     metric: "tas_change_from_2020_c",
     title: "Now place that trend on the map",
     subtitle:
       "We use 2020 as the baseline, then compare how average temperature changes across the United States.",
     note:
-      "Baseline view: no change yet, because 2020 is the comparison year.",
-    highlight: null,
+      "Animated from 2020 to 2070 under high emissions. Values show change from the 2020 baseline.",
+    animateYears: true,
+    animationStartYear: 2020,
+    animationEndYear: 2070,
+    animationStepYears: 2,
+    animationFrameDelay: 300,
   },
   {
     view: "map",
     year: 2070,
-    scenario: "ssp245",
+    scenario: "ssp585",
     metric: "tas_change_from_2020_c",
     title: "By 2070, the map gets warmer",
     subtitle:
-      "Average warming becomes visible across many states, even before looking at individual hot days.",
+      "Average warming becomes visible across many states under a high-emissions future.",
     note:
-      "Average warming is broad, but it is still an annual summary.",
-    highlight: null,
+      "The map is warmer by 2070, but it is still showing an annual average.",
   },
   {
-    view: "map",
+    view: "text-break",
     year: 2070,
     scenario: "ssp585",
     metric: "tas_change_from_2020_c",
-    title: "Emissions change the picture",
+    title: "Average temperature smooths the real situation",
     subtitle:
-      "Under higher emissions, the same future year shows stronger average warming across more of the country.",
+      "A yearly average blends comfortable days and extreme days into one number.",
     note:
-      "Higher emissions make the average-warming pattern stronger.",
-    highlight: null,
+      "This transition shifts the story from average warming to extreme hot days.",
   },
   {
-    view: "map",
+    view: "compare-line",
     year: 2070,
     scenario: "ssp585",
     metric: "tas_change_from_2020_c",
-    title: "A yearly average misses the hardest days",
+    title: "Average warming vs. extreme hot days",
     subtitle:
-      "People experience heat as specific days: cancelled outdoor practice, longer AC use, or riskier outdoor work.",
+      "The average temperature line rises gradually, but hot-day counts can grow in a way that is easier to feel.",
     note:
-      "The next view switches from average warming to days above an extreme heat threshold.",
-    highlight: null,
+      "Both lines are normalized to compare their changes over time under high emissions.",
   },
   {
     view: "map",
-    year: 2070,
-    scenario: "ssp245",
+    year: 2020,
+    scenario: "ssp585",
     metric: "hot_days_35c_change_from_2020",
     title: "Count extreme hot days instead",
     subtitle:
       "This map counts how many more days exceed 35°C compared with 2020.",
     note:
-      "Daily hot-day counts make the risk easier to see and feel.",
-    highlight: null,
-  },
-  {
-    view: "map",
-    year: 2070,
-    scenario: "ssp245",
-    metric: "hot_days_35c_change_from_2020",
-    title: "The pattern becomes sharper",
-    subtitle:
-      "Some states gain many more extreme hot days than others, making the risk easier to compare.",
-    note:
-      "The darkest states have the largest increases in additional 35°C+ days.",
-    highlight: "top",
+      "Animated from 2020 to 2070 under high emissions. Values show additional 35°C+ days compared with 2020.",
+    animateYears: true,
+    animationStartYear: 2020,
+    animationEndYear: 2070,
+    animationStepYears: 2,
+    animationFrameDelay: 300,
   },
   {
     view: "map",
     year: 2070,
     scenario: "ssp585",
     metric: "hot_days_35c_change_from_2020",
-    title: "More warming means more risky days",
+    title: "Extreme heat days do not increase evenly",
     subtitle:
-      "Under high emissions, the change is not only a warmer average. It is more days people have to live through.",
+      "By 2070, the largest increases appear in states that already sit near the 35°C threshold.",
     note:
-      "Higher emissions sharpen the daily-risk story.",
+      "The same average-warming future can create very different daily heat risks.",
     highlight: "top",
+  },
+  {
+    view: "impact-placeholder",
+    year: 2070,
+    scenario: "ssp585",
+    metric: "hot_days_35c_change_from_2020",
+    title: "Impact layer placeholder",
+    subtitle:
+      "This section will connect extra hot days to daily-life impacts.",
+    note:
+      "Impact placeholder: add daily-life examples or supporting visuals here.",
   },
   {
     view: "map",
@@ -140,7 +143,6 @@ const stepSettings = [
       "Use the controls to compare average warming with extreme hot days.",
     note:
       "Explore mode: change the year, scenario, or metric.",
-    highlight: null,
   },
 ];
 
@@ -158,6 +160,7 @@ let currentState = {
 };
 
 let selectedStateName = null;
+let mapAnimationTimer = null;
 
 const svg = d3.select("#main-chart");
 const monthlySvg = d3.select("#monthly-chart");
@@ -168,6 +171,7 @@ const stickyViz = d3.select(".sticky-viz");
 const legendContainer = d3.select("#legend");
 const mapNote = d3.select("#map-note");
 const tooltip = d3.select("#tooltip");
+const mapYearOverlay = d3.select("#map-year-overlay");
 
 const scenarioSelect = d3.select("#scenario-select");
 const yearSlider = d3.select("#year-slider");
@@ -246,7 +250,7 @@ function setupControls() {
     currentState.scenario = event.target.value;
     updateManualTitle();
     updateMainView();
-    updateSelectedStateFromCurrentView();
+    updateSelectedStateFromCurrentView(false);
   });
 
   yearSlider.on("input", (event) => {
@@ -254,14 +258,14 @@ function setupControls() {
     yearLabel.text(currentState.year);
     updateManualTitle();
     updateMainView();
-    updateSelectedStateFromCurrentView();
+    updateSelectedStateFromCurrentView(false);
   });
 
   metricSelect.on("change", (event) => {
     currentState.metric = event.target.value;
     updateManualTitle();
     updateMainView();
-    updateSelectedStateFromCurrentView();
+    updateSelectedStateFromCurrentView(false);
   });
 }
 
@@ -285,11 +289,11 @@ function setupStatePicker() {
     if (!stateName) return;
 
     selectedStateName = stateName;
-    updateSelectedStateFromCurrentView();
+    updateSelectedStateFromCurrentView(true);
   });
 }
 
-function updateSelectedStateFromCurrentView() {
+function updateSelectedStateFromCurrentView(rerenderMap = false) {
   if (!selectedStateName) return;
 
   const rows = stateData.filter((d) =>
@@ -308,7 +312,7 @@ function updateSelectedStateFromCurrentView() {
     statePicker.property("value", selectedStateName);
   }
 
-  if (currentState.view === "map") {
+  if (rerenderMap && currentState.view === "map") {
     renderMap();
   }
 }
@@ -348,19 +352,37 @@ function updateStep(step) {
   subtitle.text(setting.subtitle);
   mapNote.text(setting.note);
 
-  d3.select("body").classed("explore-mode", step === 8);
+  d3.select("body")
+    .classed("explore-mode", step === 8)
+    .classed("text-break-active", setting.view === "text-break");
 
   syncControls();
   pulseViz();
   updateMainView();
-  updateSelectedStateFromCurrentView();
+
+  if (!setting.animateYears) {
+    updateSelectedStateFromCurrentView(false);
+  }
 }
 
 function updateMainView() {
+  cancelMapAnimation();
   hideTooltip();
+
+  const setting = stepSettings[currentStep];
 
   if (currentState.view === "line") {
     renderLineChart();
+  } else if (currentState.view === "text-break") {
+    hideMapYearOverlay();
+    legendContainer.html("");
+    svg.selectAll("*").remove();
+  } else if (currentState.view === "compare-line") {
+    renderCompareLineChart();
+  } else if (currentState.view === "impact-placeholder") {
+    renderImpactPlaceholder();
+  } else if (setting?.animateYears) {
+    startMapYearAnimation(setting);
   } else {
     renderMap();
   }
@@ -383,7 +405,31 @@ function syncControls() {
   metricSelect.property("value", currentState.metric);
 }
 
+function setVizMode(mode) {
+  if (svg.attr("data-viz-mode") !== mode) {
+    svg.selectAll("*").remove();
+    svg.attr("data-viz-mode", mode);
+  }
+}
+
+function hideMapYearOverlay() {
+  if (!mapYearOverlay.empty()) {
+    mapYearOverlay.classed("is-visible", false).classed("is-animating", false);
+  }
+}
+
+function drawMapYearLabel() {
+  if (mapYearOverlay.empty()) return;
+
+  mapYearOverlay
+    .text(currentState.year)
+    .classed("is-visible", currentState.view === "map")
+    .classed("is-animating", Boolean(mapAnimationTimer));
+}
+
 function renderLineChart() {
+  hideMapYearOverlay();
+  setVizMode("line");
   svg.selectAll("*").remove();
   legendContainer.html("");
 
@@ -502,49 +548,234 @@ function renderLineChart() {
       .text(scenarioLabels[scenario]);
   }
 
-  const focus = g.append("g")
-    .attr("class", "line-focus")
-    .style("display", "none");
-
-  focus.append("line")
-    .attr("y1", 0)
-    .attr("y2", innerHeight)
-    .attr("stroke", "#17202a")
-    .attr("stroke-width", 1)
-    .attr("stroke-dasharray", "4 4");
-
-  focus.append("circle")
-    .attr("r", 4)
-    .attr("fill", "#17202a");
-
-  g.append("rect")
-    .attr("width", innerWidth)
-    .attr("height", innerHeight)
-    .attr("fill", "transparent")
-    .on("mousemove", function (event) {
-      const [mx] = d3.pointer(event, this);
-      const year = Math.round(x.invert(mx));
-      const yearRows = rows.filter((d) => d.year === year);
-      const highRow = yearRows.find((d) => d.scenario === "ssp585");
-
-      if (!highRow) return;
-
-      focus.style("display", null);
-      focus.attr("transform", `translate(${x(year)},0)`);
-      focus.select("circle")
-        .attr("cy", y(highRow.value));
-
-      showLineTooltip(event, year, yearRows);
-    })
-    .on("mouseleave", function () {
-      focus.style("display", "none");
-      hideTooltip();
-    });
-
   legendContainer
     .append("div")
     .attr("class", "legend-caption")
     .text("Lines show state-averaged U.S. warming by emissions scenario.");
+}
+
+function renderTextBreak() {
+  hideMapYearOverlay();
+  setVizMode("text-break");
+  svg.selectAll("*").remove();
+  legendContainer.html("");
+
+  const g = svg.append("g")
+    .attr("transform", `translate(${width / 2},${height / 2})`)
+    .attr("opacity", 0);
+
+  g.append("text")
+    .attr("class", "text-break-svg-title")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 42)
+    .attr("y", -50)
+    .text("Average temperature smooths");
+
+  g.append("text")
+    .attr("class", "text-break-svg-title")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 42)
+    .attr("y", 0)
+    .text("the real situation.");
+
+  g.append("text")
+    .attr("class", "text-break-svg-body")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 16)
+    .attr("y", 52)
+    .text("A yearly average blends comfortable days and extreme days into one number.");
+
+  g.append("text")
+    .attr("class", "text-break-svg-body")
+    .attr("text-anchor", "middle")
+    .attr("font-size", 16)
+    .attr("y", 80)
+    .text("But people experience heat as specific days.");
+
+  g.transition()
+    .duration(500)
+    .attr("opacity", 1);
+
+  legendContainer
+    .append("div")
+    .attr("class", "legend-caption")
+    .text("Transition: from average warming to daily heat risk.");
+}
+
+function renderCompareLineChart() {
+  hideMapYearOverlay();
+  setVizMode("compare-line");
+  svg.selectAll("*").remove();
+  legendContainer.html("");
+
+  const margin = { top: 42, right: 170, bottom: 54, left: 68 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const rows = getCompareRows();
+
+  if (!rows.length) {
+    mapNote.text("No comparison data available.");
+    return;
+  }
+
+  const x = d3.scaleLinear()
+    .domain(d3.extent(rows, (d) => d.year))
+    .range([0, innerWidth]);
+
+  const y = d3.scaleLinear()
+    .domain([0, 1])
+    .range([innerHeight, 0]);
+
+  const color = d3.scaleOrdinal()
+    .domain(["Average warming", "Additional 35°C+ days"])
+    .range(["#4f8fc0", "#c4512c"]);
+
+  const g = svg.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  g.append("g")
+    .attr("class", "grid")
+    .call(
+      d3.axisLeft(y)
+        .ticks(5)
+        .tickSize(-innerWidth)
+        .tickFormat("")
+    )
+    .selectAll("line")
+    .attr("stroke", "rgba(23, 32, 42, 0.10)");
+
+  g.select(".grid .domain").remove();
+
+  g.append("g")
+    .attr("class", "axis")
+    .attr("transform", `translate(0,${innerHeight})`)
+    .call(
+      d3.axisBottom(x)
+        .ticks(6)
+        .tickFormat(d3.format("d"))
+    );
+
+  g.append("g")
+    .attr("class", "axis")
+    .call(
+      d3.axisLeft(y)
+        .ticks(5)
+        .tickFormat((d) => `${Math.round(d * 100)}%`)
+    );
+
+  g.append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight + 42)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#5f6b73")
+    .attr("font-size", 12)
+    .text("Year");
+
+  g.append("text")
+    .attr("x", -innerHeight / 2)
+    .attr("y", -50)
+    .attr("transform", "rotate(-90)")
+    .attr("text-anchor", "middle")
+    .attr("fill", "#5f6b73")
+    .attr("font-size", 12)
+    .text("Normalized change since 2020");
+
+  const line = d3.line()
+    .x((d) => x(d.year))
+    .y((d) => y(d.normalized))
+    .curve(d3.curveMonotoneX);
+
+  const grouped = d3.group(rows, (d) => d.series);
+
+  for (const [series, seriesRows] of grouped) {
+    const pathLine = g.append("path")
+      .datum(seriesRows)
+      .attr("fill", "none")
+      .attr("stroke", color(series))
+      .attr("stroke-width", 3)
+      .attr("d", line);
+
+    const totalLength = pathLine.node().getTotalLength();
+
+    pathLine
+      .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
+      .attr("stroke-dashoffset", totalLength)
+      .transition()
+      .duration(900)
+      .ease(d3.easeCubicOut)
+      .attr("stroke-dashoffset", 0);
+
+    const last = seriesRows[seriesRows.length - 1];
+
+    g.append("text")
+      .attr("x", x(last.year) + 10)
+      .attr("y", y(last.normalized))
+      .attr("dominant-baseline", "middle")
+      .attr("fill", color(series))
+      .attr("font-size", 12)
+      .attr("font-weight", 900)
+      .text(series);
+  }
+
+  legendContainer
+    .append("div")
+    .attr("class", "legend-caption")
+    .text("Both lines are normalized so different units can be compared.");
+}
+
+function renderImpactPlaceholder() {
+  hideMapYearOverlay();
+  setVizMode("impact-placeholder");
+  svg.selectAll("*").remove();
+  legendContainer.html("");
+
+  const g = svg.append("g")
+    .attr("opacity", 0);
+
+  g.append("rect")
+    .attr("class", "impact-placeholder-box")
+    .attr("x", 90)
+    .attr("y", 95)
+    .attr("width", width - 180)
+    .attr("height", height - 190)
+    .attr("rx", 26);
+
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height / 2 - 42)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#8f2f1b")
+    .attr("font-size", 13)
+    .attr("font-weight", 900)
+    .attr("letter-spacing", "0.14em")
+    .text("IMPACT PLACEHOLDER");
+
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height / 2)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#17202a")
+    .attr("font-size", 30)
+    .attr("font-weight", 900)
+    .text("What changes when hot days add up?");
+
+  g.append("text")
+    .attr("x", width / 2)
+    .attr("y", height / 2 + 42)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#5f6b73")
+    .attr("font-size", 16)
+    .text("Add icons, examples, or a small interaction here.");
+
+  g.transition()
+    .duration(500)
+    .attr("opacity", 1);
+
+  legendContainer
+    .append("div")
+    .attr("class", "legend-caption")
+    .text("Placeholder for daily-life impact layer.");
 }
 
 function getNationalAverageRows() {
@@ -568,33 +799,54 @@ function getNationalAverageRows() {
     .sort((a, b) => d3.ascending(a.year, b.year));
 }
 
-function showLineTooltip(event, year, rows) {
-  if (tooltip.empty()) return;
+function getCompareRows() {
+  const scenario = "ssp585";
 
-  const left = Math.min(event.clientX + 16, window.innerWidth - 290);
-  const top = Math.min(event.clientY + 16, window.innerHeight - 180);
+  const avgRows = d3.rollups(
+    tasData.filter((d) => d.scenario === scenario),
+    (v) => d3.mean(v, (d) => d.tas_change_from_2020_c),
+    (d) => d.year
+  ).map(([year, value]) => ({
+    year,
+    rawValue: value,
+    series: "Average warming",
+  }));
 
-  const rowsByScenario = new Map(rows.map((d) => [d.scenario, d]));
+  const hotRows = d3.rollups(
+    stateData.filter((d) => d.scenario === scenario),
+    (v) => d3.mean(v, (d) => d.hot_days_35c_change_from_2020),
+    (d) => d.year
+  ).map(([year, value]) => ({
+    year,
+    rawValue: value,
+    series: "Additional 35°C+ days",
+  }));
 
-  const lines = scenarioOrder.map((scenario) => {
-    const row = rowsByScenario.get(scenario);
-    return `<p>${scenarioLabels[scenario]}: <strong>${formatValue(row?.value, "°C")}</strong></p>`;
-  }).join("");
+  const normalizeSeries = (rows) => {
+    const maxValue = d3.max(rows, (d) => Math.abs(d.rawValue)) || 1;
+    return rows.map((d) => ({
+      ...d,
+      normalized: Math.max(0, d.rawValue / maxValue),
+    }));
+  };
 
-  tooltip
-    .attr("hidden", null)
-    .style("left", `${left}px`)
-    .style("top", `${top}px`)
-    .html(`
-      <h3>${year}</h3>
-      ${lines}
-    `);
+  return [
+    ...normalizeSeries(avgRows),
+    ...normalizeSeries(hotRows),
+  ]
+    .filter((d) => Number.isFinite(d.year) && Number.isFinite(d.normalized))
+    .sort((a, b) => d3.ascending(a.year, b.year));
 }
 
-function renderMap() {
-  svg.selectAll("*").remove();
+function renderMap(transitionDuration = 750) {
+  setVizMode("map");
 
-  const mapG = svg.append("g");
+  let mapG = svg.select("g.map-layer");
+
+  if (mapG.empty()) {
+    svg.selectAll("*").remove();
+    mapG = svg.append("g").attr("class", "map-layer");
+  }
 
   const filtered = stateData.filter((d) =>
     d.year === currentState.year &&
@@ -613,16 +865,41 @@ function renderMap() {
   const color = getColorScale(metric, values);
   const topStates = getTopStates(filtered, metric, 5);
 
-  mapG.selectAll("path")
+  const paths = mapG.selectAll("path")
     .data(statesGeo.features, getFeatureStateName)
-    .join("path")
-    .attr("class", "state")
-    .attr("d", path)
-    .attr("fill", "#e3e8ea")
-    .attr("opacity", 1)
+    .join(
+      (enter) =>
+        enter.append("path")
+          .attr("class", "state")
+          .attr("d", path)
+          .attr("fill", "#e3e8ea")
+          .attr("opacity", 1)
+          .on("mousemove", function (event, feature) {
+            const stateName = getFeatureStateName(feature);
+            const row = dataByState.get(normalizeStateName(stateName));
+            showTooltip(event, stateName, row, metric);
+          })
+          .on("mouseleave", hideTooltip)
+          .on("click", function (event, feature) {
+            const stateName = getFeatureStateName(feature);
+            const row = dataByState.get(normalizeStateName(stateName));
+
+            selectedStateName = normalizeStateName(stateName);
+
+            if (!statePicker.empty()) {
+              statePicker.property("value", selectedStateName);
+            }
+
+            updateSelectedStateCard(stateName, row);
+            renderMap();
+          }),
+      (update) => update
+    );
+
+  paths
     .classed("highlighted", (feature) => {
       const setting = stepSettings[currentStep];
-      if (setting.highlight !== "top") return false;
+      if (setting?.highlight !== "top") return false;
 
       const stateName = normalizeStateName(getFeatureStateName(feature));
       return topStates.has(stateName);
@@ -631,30 +908,8 @@ function renderMap() {
       const stateName = normalizeStateName(getFeatureStateName(feature));
       return selectedStateName === stateName;
     })
-    .on("mousemove", function (event, feature) {
-      const stateName = getFeatureStateName(feature);
-      const row = dataByState.get(normalizeStateName(stateName));
-
-      showTooltip(event, stateName, row, metric);
-    })
-    .on("mouseleave", function () {
-      hideTooltip();
-    })
-    .on("click", function (event, feature) {
-      const stateName = getFeatureStateName(feature);
-      const row = dataByState.get(normalizeStateName(stateName));
-
-      selectedStateName = normalizeStateName(stateName);
-
-      if (!statePicker.empty()) {
-        statePicker.property("value", selectedStateName);
-      }
-
-      updateSelectedStateCard(stateName, row);
-      renderMap();
-    })
     .transition()
-    .duration(750)
+    .duration(transitionDuration)
     .ease(d3.easeCubicOut)
     .attr("fill", (feature) => {
       const stateName = getFeatureStateName(feature);
@@ -666,7 +921,8 @@ function renderMap() {
     })
     .attr("opacity", (feature) => {
       const setting = stepSettings[currentStep];
-      if (setting.highlight !== "top") return 1;
+
+      if (setting?.highlight !== "top") return 1;
 
       const stateName = normalizeStateName(getFeatureStateName(feature));
       return topStates.has(stateName) || selectedStateName === stateName ? 1 : 0.48;
@@ -674,10 +930,59 @@ function renderMap() {
 
   drawLegend(color, metric);
   updateMapNote(filtered, metric);
+  drawMapYearLabel();
 
   if (selectedStateName) {
     const selectedRow = dataByState.get(selectedStateName);
     updateSelectedStateCard(selectedStateName, selectedRow);
+  }
+}
+
+function startMapYearAnimation(setting) {
+  const startYear = setting.animationStartYear ?? 2020;
+  const endYear = setting.animationEndYear ?? 2070;
+  const stepYears = setting.animationStepYears ?? 2;
+  const frameDelay = setting.animationFrameDelay ?? 300;
+
+  let year = startYear;
+
+  currentState.year = year;
+  currentState.scenario = setting.scenario;
+  currentState.metric = setting.metric;
+
+  syncControls();
+  renderMap(0);
+
+  mapAnimationTimer = d3.interval(() => {
+    year += stepYears;
+
+    if (year > endYear) {
+      year = endYear;
+    }
+
+    currentState.year = year;
+    syncControls();
+    renderMap(260);
+
+    if (year >= endYear) {
+      cancelMapAnimation();
+
+      currentState.year = endYear;
+      syncControls();
+      renderMap(650);
+      updateSelectedStateFromCurrentView(false);
+    }
+  }, frameDelay);
+}
+
+function cancelMapAnimation() {
+  if (mapAnimationTimer) {
+    mapAnimationTimer.stop();
+    mapAnimationTimer = null;
+  }
+
+  if (!mapYearOverlay.empty()) {
+    mapYearOverlay.classed("is-animating", false);
   }
 }
 
@@ -973,7 +1278,27 @@ function showTooltip(event, stateName, row, metric) {
 
   const avgWarming = row.tas_change_from_2020_c;
   const hotDaysChange = row.hot_days_35c_change_from_2020;
-  const metricValue = row[metric];
+  const totalHotDays = row.hot_days_35c;
+
+  let tooltipRows = "";
+
+  if (metric === "tas_change_from_2020_c") {
+    tooltipRows = `
+      <p>Average warming: <strong>${formatValue(avgWarming, "°C")}</strong></p>
+      <p>Additional 35°C+ days: <strong>${formatValue(hotDaysChange, "days")}</strong></p>
+    `;
+  } else if (metric === "hot_days_35c_change_from_2020") {
+    tooltipRows = `
+      <p>Additional 35°C+ days: <strong>${formatValue(hotDaysChange, "days")}</strong></p>
+      <p>Average warming: <strong>${formatValue(avgWarming, "°C")}</strong></p>
+    `;
+  } else if (metric === "hot_days_35c") {
+    tooltipRows = `
+      <p>Total 35°C+ days: <strong>${formatValue(totalHotDays, "days")}</strong></p>
+      <p>Additional 35°C+ days: <strong>${formatValue(hotDaysChange, "days")}</strong></p>
+      <p>Average warming: <strong>${formatValue(avgWarming, "°C")}</strong></p>
+    `;
+  }
 
   tooltip
     .attr("hidden", null)
@@ -982,9 +1307,7 @@ function showTooltip(event, stateName, row, metric) {
     .html(`
       <h3>${stateName}</h3>
       <p><strong>${scenarioLabels[currentState.scenario]}</strong>, ${currentState.year}</p>
-      <p>${metricShortLabels[metric]}: <strong>${formatValue(metricValue, metricUnits[metric])}</strong></p>
-      <p>Average warming: <strong>${formatValue(avgWarming, "°C")}</strong></p>
-      <p>Additional 35°C+ days: <strong>${formatValue(hotDaysChange, "days")}</strong></p>
+      ${tooltipRows}
     `);
 }
 

@@ -133,7 +133,7 @@ a {
 }
 
 #chart-subtitle {
-  max-width: 640px;
+  max-width: 680px;
   margin: 0.3rem 0 0;
   color: var(--muted);
   font-size: 0.78rem;
@@ -141,6 +141,7 @@ a {
 }
 
 .chart-wrap {
+  position: relative;
   min-height: 0;
   height: 100%;
   display: grid;
@@ -154,13 +155,37 @@ a {
   display: block;
 }
 
+.map-year-overlay {
+  position: absolute;
+  top: 0.8rem;
+  right: 1.1rem;
+  z-index: 5;
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.map-year-overlay.is-visible {
+  opacity: 0.92;
+}
+
+.map-year-overlay.is-animating {
+  transform: scale(1.02);
+}
+
 .state {
   stroke: #ffffff;
   stroke-width: 0.8;
   cursor: pointer;
-  transition:
-    opacity 0.15s ease,
-    stroke-width 0.15s ease;
+  transition: opacity 0.15s ease, stroke-width 0.15s ease;
 }
 
 .state:hover {
@@ -169,8 +194,8 @@ a {
 }
 
 .state.highlighted {
-  stroke: #17202a;
-  stroke-width: 1.8;
+  stroke: rgba(23, 32, 42, 0.38);
+  stroke-width: 1.1;
 }
 
 .state.selected {
@@ -351,6 +376,77 @@ input[type="range"] {
   line-height: 1.65;
 }
 
+body.text-break-active .scrolly {
+  display: block;
+  max-width: none;
+  padding: 0;
+}
+
+body.text-break-active .graphic {
+  display: none;
+}
+
+body.text-break-active .story {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body.text-break-active .story .step {
+  visibility: hidden;
+}
+
+body.text-break-active .story .step.is-active.text-only-step {
+  visibility: visible;
+  min-height: 100vh;
+  width: min(980px, 88vw);
+  margin: 0 auto;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  opacity: 1;
+  transform: none;
+}
+
+body.text-break-active .step.is-active.text-only-step .step-number {
+  margin-bottom: 1rem;
+}
+
+body.text-break-active .step.is-active.text-only-step h2 {
+  max-width: 920px;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: clamp(2.8rem, 6vw, 5.2rem);
+  line-height: 1.02;
+}
+
+body.text-break-active .step.is-active.text-only-step p:not(.step-number) {
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: clamp(1.05rem, 1.55vw, 1.35rem);
+  line-height: 1.7;
+}
+
+.text-break-svg-title {
+  fill: var(--text);
+  font-weight: 900;
+  letter-spacing: -0.055em;
+}
+
+.text-break-svg-body {
+  fill: var(--muted);
+  font-weight: 500;
+}
+
+.impact-placeholder-box {
+  fill: rgba(255, 255, 255, 0.88);
+  stroke: rgba(143, 47, 27, 0.25);
+  stroke-width: 2;
+  stroke-dasharray: 7 6;
+}
+
 .sticky-viz.step-pulse {
   animation: softPulse 0.55s ease;
 }
@@ -402,7 +498,6 @@ input[type="range"] {
 .state-picker-row {
   max-width: 420px;
   margin: -0.8rem auto 1.4rem;
-  margin-top: 0;
   display: grid;
   gap: 0.4rem;
   text-align: left;
@@ -528,6 +623,29 @@ input[type="range"] {
   text-align: right;
 }
 
+.monthly-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.62fr) minmax(0, 1.38fr);
+  gap: 1rem;
+  margin-top: 0.9rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.monthly-panel h3 {
+  margin: 0 0 0.7rem;
+  font-size: 1.45rem;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.monthly-panel p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .monthly-chart-card {
   min-height: 260px;
   padding: 0.75rem;
@@ -557,58 +675,6 @@ input[type="range"] {
   fill: var(--muted);
   font-size: 14px;
   text-anchor: middle;
-}
-
-.monthly-panel {
-  display: grid;
-  grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1.3fr);
-  gap: 1rem;
-  margin-top: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.68);
-}
-
-.monthly-panel h3 {
-  margin: 0 0 0.7rem;
-  font-size: 1.55rem;
-  line-height: 1.05;
-  letter-spacing: -0.04em;
-}
-
-.monthly-panel p:not(.eyebrow) {
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.placeholder-viz {
-  min-height: 230px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 0.55rem;
-  padding: 1.4rem;
-  border: 2px dashed rgba(143, 47, 27, 0.28);
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at 50% 30%, rgba(196, 81, 44, 0.08), transparent 18rem),
-    rgba(255, 255, 255, 0.72);
-  color: #8b8f93;
-  text-align: center;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-}
-
-.placeholder-viz span {
-  font-size: clamp(0.95rem, 1.25vw, 1.2rem);
-  line-height: 1.5;
-}
-
-.placeholder-viz small {
-  max-width: 520px;
-  color: var(--muted);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-weight: 700;
 }
 
 .closing {
@@ -712,12 +778,15 @@ footer p {
     min-height: 360px;
   }
 
+  .state-picker-row {
+    margin-top: 0;
+  }
+
   .snapshot-metrics {
     grid-template-columns: 1fr;
   }
 
-  .placeholder-viz {
-    min-height: 220px;
-    padding: 1.2rem;
+  .monthly-chart-card {
+    min-height: 240px;
   }
 }

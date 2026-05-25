@@ -791,7 +791,7 @@ footer p {
   }
 }
 
-/* add tooltip for line plots */
+/* add summary for line plots */
 .trend-summary {
   position: absolute;         
   top: 0.5rem;

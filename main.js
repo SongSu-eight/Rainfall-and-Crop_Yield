@@ -41,9 +41,7 @@ const stepSettings = [
     metric: "tas_change_from_2020_c",
     title: "Start with the average",
     subtitle:
-      "Average temperature changes gradually over time, especially under higher emissions.",
-    note:
-      "This line chart summarizes the national average across states before we look at where warming happens.",
+      "Average temperature changes gradually over time, especially under higher emissions."
   },
   {
     view: "map",
@@ -131,7 +129,7 @@ const stepSettings = [
     subtitle:
       "This section will connect extra hot days to daily-life impacts.",
     note:
-      "Impact placeholder: add daily-life examples or supporting visuals here.",
+      "daily-life examples",
   },
   {
     view: "map",
@@ -369,7 +367,22 @@ function updateMainView() {
   cancelMapAnimation();
   hideTooltip();
 
+  // step8-move summary
+  svg.style("display", null);
+  d3.select(".chart-wrap").selectAll(".impact-fill").remove();
+  const summaryEl = document.getElementById("trend-summary");
+  if (summaryEl) summaryEl.style.display = ""; 
+  // step8-move summary
+
   const setting = stepSettings[currentStep];
+
+  const noTooltipSteps = new Set([1, 5]);
+  document.body.classList.toggle("no-tooltip", noTooltipSteps.has(currentStep));
+
+  const viewsWithSummary = new Set(["line", "compare-line"]);
+  if (!viewsWithSummary.has(currentState.view)) {
+    hideTrendSummary();
+  }
 
   if (currentState.view === "line") {
     renderLineChart();
@@ -426,8 +439,86 @@ function drawMapYearLabel() {
     .classed("is-visible", currentState.view === "map")
     .classed("is-animating", Boolean(mapAnimationTimer));
 }
+/* ---------------------------------- */
+/* ---------------------------------- */
+/* ---------------------------------- */
 
+function showTrendSummary(seriesByScenario, color) {
+  const container = document.getElementById("trend-summary");
+  const rowsEl = document.getElementById("trend-summary-rows");
+  if (!container || !rowsEl) return;
+
+  rowsEl.innerHTML = "";
+  for (const scenario of scenarioOrder) {
+    const series = seriesByScenario[scenario];
+    if (!series || !series.length) continue;
+    const first = series[0].value;
+    const last = series[series.length - 1].value;
+    const delta = last - first;
+    const sign = delta >= 0 ? "+" : "";
+    const row = document.createElement("div");
+    row.className = "trend-summary-row";
+    row.innerHTML =
+      `<span class="dot" style="background:${color(scenario)}"></span>` +
+      `<span class="name">${scenarioLabels[scenario]}</span>` +
+      `<span class="value" style="color:${color(scenario)}">${sign}${delta.toFixed(2)} °C</span>`;
+    rowsEl.appendChild(row);
+  }
+  container.classList.add("is-active");
+  // 用 rAF 触发过渡(先 display:flex 再加 is-visible 才有动画)
+  requestAnimationFrame(() => {
+    container.classList.add("is-visible");
+  });
+}
+
+function hideTrendSummary() {
+  const el = document.getElementById("trend-summary");
+  if (!el) return;
+  el.classList.remove("is-visible");
+  el.classList.remove("is-active");
+}
+
+function showCompareSummary(rowsBySeries) {
+  const container = document.getElementById("trend-summary");
+  const rowsEl = document.getElementById("trend-summary-rows");
+  if (!container || !rowsEl) return;
+
+  rowsEl.innerHTML = "";
+
+  const seriesConfig = [
+    { name: "Average warming",        color: "#4f8fc0", unit: "°C",   decimals: 2 },
+    { name: "Additional 35°C+ days",  color: "#c4512c", unit: "days", decimals: 1 },
+  ];
+
+  for (const cfg of seriesConfig) {
+    const series = rowsBySeries.get(cfg.name);
+    if (!series || !series.length) continue;
+
+    // rawValue 本身就是"相对 2020 的变化",直接取 2070 那一年的值
+    const point2070 = series.find((d) => d.year === 2070);
+    const value = point2070?.rawValue ?? series[series.length - 1].rawValue;
+    const sign = value >= 0 ? "+" : "";
+
+    const row = document.createElement("div");
+    row.className = "trend-summary-row";
+    row.innerHTML =
+      `<span class="dot" style="background:${cfg.color}"></span>` +
+      `<span class="name">${cfg.name}</span>` +
+      `<span class="value" style="color:${cfg.color}">${sign}${value.toFixed(cfg.decimals)} ${cfg.unit}</span>`;
+    rowsEl.appendChild(row);
+  }
+
+  container.classList.add("is-active");
+  requestAnimationFrame(() => {
+    container.classList.add("is-visible");
+  });
+}
+
+/* ---------------------------------- */
+/* ---------------------------------- */
+/* ---------------------------------- */
 function renderLineChart() {
+  hideTrendSummary(); 
   hideMapYearOverlay();
   setVizMode("line");
   svg.selectAll("*").remove();
@@ -506,52 +597,138 @@ function renderLineChart() {
     .attr("fill", "#5f6b73")
     .attr("font-size", 12)
     .text("Average temperature change from 2020");
+/* ---------------------------------- */
+/* ---------------------------------- */
+/* ---------------------------------- */
 
   const line = d3.line()
-    .x((d) => x(d.year))
-    .y((d) => y(d.value))
-    .curve(d3.curveMonotoneX);
+      .x((d) => x(d.year))
+      .y((d) => y(d.value))
+      .curve(d3.curveMonotoneX);
 
-  const grouped = d3.group(rows, (d) => d.scenario);
+    const grouped = d3.group(rows, (d) => d.scenario);
 
-  for (const scenario of scenarioOrder) {
-    const scenarioRows = grouped.get(scenario) || [];
+    // —— 收集每条线的数据,供 tooltip / summary 用 ——
+    const seriesByScenario = {};
+    let pathsAnimating = 0;
 
-    if (!scenarioRows.length) continue;
+    for (const scenario of scenarioOrder) {
+      const scenarioRows = grouped.get(scenario) || [];
+      if (!scenarioRows.length) continue;
 
-    const pathLine = g.append("path")
-      .datum(scenarioRows)
-      .attr("fill", "none")
-      .attr("stroke", color(scenario))
-      .attr("stroke-width", scenario === "ssp585" ? 3 : 2.4)
-      .attr("d", line);
+      seriesByScenario[scenario] = scenarioRows;
 
-    const totalLength = pathLine.node().getTotalLength();
+      const pathLine = g.append("path")
+        .datum(scenarioRows)
+        .attr("fill", "none")
+        .attr("stroke", color(scenario))
+        .attr("stroke-width", scenario === "ssp585" ? 3 : 2.4)
+        .attr("d", line);
 
-    pathLine
-      .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
-      .attr("stroke-dashoffset", totalLength)
-      .transition()
-      .duration(1000)
-      .ease(d3.easeCubicOut)
-      .attr("stroke-dashoffset", 0);
+      const totalLength = pathLine.node().getTotalLength();
+      pathsAnimating += 1;
 
-    const last = scenarioRows[scenarioRows.length - 1];
+      pathLine
+        .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
+        .attr("stroke-dashoffset", totalLength)
+        .transition()
+        .duration(1400)
+        .ease(d3.easeCubicOut)
+        .attr("stroke-dashoffset", 0)
+        .on("end", () => {
+          pathsAnimating -= 1;
+          if (pathsAnimating === 0) {
+            // 加 300ms 延迟,让用户先看清最终的线
+            setTimeout(() => {
+              showTrendSummary(seriesByScenario, color);
+              enableHover();
+            }, 300);
+          }
+        });
 
-    g.append("text")
-      .attr("x", x(last.year) + 10)
-      .attr("y", y(last.value))
-      .attr("fill", color(scenario))
-      .attr("font-size", 12)
-      .attr("font-weight", 800)
-      .attr("dominant-baseline", "middle")
-      .text(scenarioLabels[scenario]);
-  }
+      const last = scenarioRows[scenarioRows.length - 1];
+      g.append("text")
+        .attr("x", x(last.year) + 10)
+        .attr("y", y(last.value))
+        .attr("fill", color(scenario))
+        .attr("font-size", 12)
+        .attr("font-weight", 800)
+        .attr("dominant-baseline", "middle")
+        .text(scenarioLabels[scenario]);
+    }
 
+    // —— Hover 元素(初始隐藏)——
+    const hoverLine = g.append("line")
+      .attr("class", "hover-line")
+      .attr("y1", 0)
+      .attr("y2", innerHeight)
+      .style("opacity", 0);
+
+    const hoverDots = {};
+    for (const scenario of scenarioOrder) {
+      if (!seriesByScenario[scenario]) continue;
+      hoverDots[scenario] = g.append("circle")
+        .attr("class", "hover-dot")
+        .attr("r", 4.5)
+        .attr("fill", color(scenario))
+        .style("opacity", 0);
+    }
+
+    // —— 透明 rect 接收鼠标事件 ——
+    const hoverRect = g.append("rect")
+      .attr("width", innerWidth)
+      .attr("height", innerHeight)
+      .attr("fill", "transparent")
+      .style("pointer-events", "none"); // 动画结束前不响应
+
+    function enableHover() {
+      hoverRect.style("pointer-events", "all");
+      hoverRect
+        .on("mousemove", function (event) {
+          const [mx] = d3.pointer(event, this);
+          const yearAtMouse = Math.round(x.invert(mx));
+          const clamped = Math.max(2020, Math.min(2070, yearAtMouse));
+          const xPos = x(clamped);
+
+          hoverLine.attr("x1", xPos).attr("x2", xPos).style("opacity", 1);
+
+          const lines = [`<h3>${clamped} vs 2020 baseline</h3>`];
+          for (const scenario of scenarioOrder) {
+            const series = seriesByScenario[scenario];
+            if (!series) continue;
+            const point = series.find((d) => d.year === clamped);
+            if (!point) continue;
+            const sign = point.value >= 0 ? "+" : "";
+            const c = color(scenario);
+            hoverDots[scenario]
+              .attr("cx", xPos)
+              .attr("cy", y(point.value))
+              .style("opacity", 1);
+            lines.push(
+              `<p><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c};margin-right:6px;"></span>` +
+              `${scenarioLabels[scenario]}: <strong>${sign}${point.value.toFixed(2)}°C</strong></p>`
+            );
+          }
+
+          tooltip
+            .html(lines.join(""))
+            .style("left", `${event.clientX + 14}px`)
+            .style("top", `${event.clientY + 14}px`)
+            .attr("hidden", null);
+        })
+        .on("mouseleave", function () {
+          hoverLine.style("opacity", 0);
+          Object.values(hoverDots).forEach((d) => d.style("opacity", 0));
+          tooltip.attr("hidden", true);
+        });
+    }
+/* ---------------------------------- */
+/* ---------------------------------- */
+/* ---------------------------------- */
   legendContainer
     .append("div")
     .attr("class", "legend-caption")
-    .text("Lines show state-averaged U.S. warming by emissions scenario.");
+    .text("Lines show averaged U.S. warming by emissions scenario.");
 }
 
 function renderTextBreak() {
@@ -603,6 +780,7 @@ function renderTextBreak() {
 }
 
 function renderCompareLineChart() {
+  hideTrendSummary(); 
   hideMapYearOverlay();
   setVizMode("compare-line");
   svg.selectAll("*").remove();
@@ -688,23 +866,32 @@ function renderCompareLineChart() {
 
   const grouped = d3.group(rows, (d) => d.series);
 
+  let pathsAnimating = 0;
+
   for (const [series, seriesRows] of grouped) {
-    const pathLine = g.append("path")
-      .datum(seriesRows)
-      .attr("fill", "none")
-      .attr("stroke", color(series))
-      .attr("stroke-width", 3)
-      .attr("d", line);
+      const pathLine = g.append("path")
+        .datum(seriesRows)
+        .attr("fill", "none")
+        .attr("stroke", color(series))
+        .attr("stroke-width", 3)
+        .attr("d", line);
 
-    const totalLength = pathLine.node().getTotalLength();
+      const totalLength = pathLine.node().getTotalLength();
+      pathsAnimating += 1;
 
-    pathLine
-      .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
-      .attr("stroke-dashoffset", totalLength)
-      .transition()
-      .duration(900)
-      .ease(d3.easeCubicOut)
-      .attr("stroke-dashoffset", 0);
+      pathLine
+        .attr("stroke-dasharray", `${totalLength} ${totalLength}`)
+        .attr("stroke-dashoffset", totalLength)
+        .transition()
+        .duration(900)
+        .ease(d3.easeCubicOut)
+        .attr("stroke-dashoffset", 0)
+        .on("end", () => {
+          pathsAnimating -= 1;
+          if (pathsAnimating === 0) {
+            setTimeout(() => showCompareSummary(grouped), 300);
+          }
+        });
 
     const last = seriesRows[seriesRows.length - 1];
 
@@ -724,59 +911,104 @@ function renderCompareLineChart() {
     .text("Both lines are normalized so different units can be compared.");
 }
 
+// step8impact
 function renderImpactPlaceholder() {
   hideMapYearOverlay();
+
+  // 彻底清掉 summary 残留(不靠 class 过渡,直接 DOM 操作)
+  const summaryEl = document.getElementById("trend-summary");
+  if (summaryEl) {
+    summaryEl.classList.remove("is-active", "is-visible");
+    summaryEl.style.display = "none";
+    const rowsEl = document.getElementById("trend-summary-rows");
+    if (rowsEl) rowsEl.innerHTML = "";
+  }
+
   setVizMode("impact-placeholder");
   svg.selectAll("*").remove();
   legendContainer.html("");
 
-  const g = svg.append("g")
-    .attr("opacity", 0);
+  title.text("What changes when hot days add up?");
+  subtitle.text("Four daily-life impacts of the extra heat days projected for California by 2050.");
 
-  g.append("rect")
-    .attr("class", "impact-placeholder-box")
-    .attr("x", 90)
-    .attr("y", 95)
-    .attr("width", width - 180)
-    .attr("height", height - 190)
-    .attr("rx", 26);
+  svg.style("display", "none");
 
-  g.append("text")
-    .attr("x", width / 2)
-    .attr("y", height / 2 - 42)
-    .attr("text-anchor", "middle")
-    .attr("fill", "#8f2f1b")
-    .attr("font-size", 13)
-    .attr("font-weight", 900)
-    .attr("letter-spacing", "0.14em")
-    .text("IMPACT PLACEHOLDER");
+  const chartWrap = d3.select(".chart-wrap");
+  chartWrap.selectAll(".impact-fill").remove();
 
-  g.append("text")
-    .attr("x", width / 2)
-    .attr("y", height / 2)
-    .attr("text-anchor", "middle")
-    .attr("fill", "#17202a")
-    .attr("font-size", 30)
-    .attr("font-weight", 900)
-    .text("What changes when hot days add up?");
+  const container = chartWrap.append("div")
+    .attr("class", "impact-fill")
+    .style("opacity", 0);
 
-  g.append("text")
-    .attr("x", width / 2)
-    .attr("y", height / 2 + 42)
-    .attr("text-anchor", "middle")
-    .attr("fill", "#5f6b73")
-    .attr("font-size", 16)
-    .text("Add icons, examples, or a small interaction here.");
+  container.html(`
+    <div class="impact-viz-content">
+      <div class="impact-viz-rows">
+        <div class="impact-viz-row">
+          <div class="ivr-num">01</div>
+          <div class="ivr-body">
+            <div class="ivr-head">
+              <span class="ivr-label">SLEEP</span>
+              <span class="ivr-stat">&minus;11 <span class="ivr-unit">hrs / yr</span></span>
+            </div>
+            <p class="ivr-desc">Warm nights shorten sleep. By 2099 the gap could double &mdash; the West Coast hit roughly twice as hard as inland.</p>
+            <p class="ivr-cite">Minor et al. (2022), <i>One Earth</i></p>
+          </div>
+        </div>
 
-  g.transition()
+        <div class="impact-viz-row">
+          <div class="ivr-num">02</div>
+          <div class="ivr-body">
+            <div class="ivr-head">
+              <span class="ivr-label">LEARNING</span>
+              <span class="ivr-stat">&minus;5% <span class="ivr-unit">of a school year</span></span>
+            </div>
+            <p class="ivr-desc">Days above 90&deg;F lower PSAT scores. Without AC the loss is ~30% larger, and 3&times; larger for Black and Hispanic students.</p>
+            <p class="ivr-cite">Park, Goodman et al. (2020), <i>AEJ</i></p>
+          </div>
+        </div>
+
+        <div class="impact-viz-row">
+          <div class="ivr-num">03</div>
+          <div class="ivr-body">
+            <div class="ivr-head">
+              <span class="ivr-label">COOLING COST</span>
+              <span class="ivr-stat">+$200 <span class="ivr-unit">/ summer</span></span>
+            </div>
+            <p class="ivr-desc">AC alone can add $72&ndash;$108 a month per household &mdash; and 1 in 5 low-income U.S. households have no AC at all.</p>
+            <p class="ivr-cite">U.S. EIA (2024)</p>
+          </div>
+        </div>
+
+        <div class="impact-viz-row">
+          <div class="ivr-num">04</div>
+          <div class="ivr-body">
+            <div class="ivr-head">
+              <span class="ivr-label">ER VISITS</span>
+              <span class="ivr-stat">+35k <span class="ivr-unit">/ summer statewide</span></span>
+            </div>
+            <p class="ivr-desc">Hot days drive cardiovascular, respiratory, and mental-health ER visits &mdash; costing roughly $1B per summer nationally.</p>
+            <p class="ivr-cite">Stanford / UCSD (2025)</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="impact-viz-equity">
+        <span class="ive-tag">BUT NOT EVERYONE FEELS IT EQUALLY</span>
+        <p>Low-income students lose <em>3&times;</em> more learning. Outdoor workers lose <em>14%</em> of their labor capacity above 90&deg;F. <em>1 in 5</em> households can't afford to turn on AC.</p>
+      </div>
+    </div>
+  `);
+
+  container.transition()
     .duration(500)
-    .attr("opacity", 1);
+    .style("opacity", 1);
 
   legendContainer
     .append("div")
     .attr("class", "legend-caption")
-    .text("Placeholder for daily-life impact layer.");
+    .text("The impact of high emissions down to 2070 on people's lives");
 }
+// step8impact
 
 function getNationalAverageRows() {
   const grouped = d3.rollups(

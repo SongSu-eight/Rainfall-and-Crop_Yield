@@ -790,3 +790,230 @@ footer p {
     min-height: 240px;
   }
 }
+
+/* add summary for line plots */
+.trend-summary {
+  position: absolute;         
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 4;
+  display: none;               
+  flex-direction: column;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  background: var(--heat-soft);
+  border: 1px solid rgba(196, 81, 44, 0.18);
+  box-shadow: 0 4px 12px rgba(40, 55, 70, 0.08);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
+}
+
+.trend-summary.is-active {
+  display: flex;             
+}
+
+.trend-summary.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.trend-summary.is-active.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.trend-summary-label {
+  margin: 0 0 0.25rem;
+  color: var(--accent-dark);
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.trend-summary-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.trend-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  white-space: nowrap;        
+}
+
+.trend-summary-row .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.trend-summary-row .name {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.trend-summary-row .value {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+
+.hover-line {
+  stroke: rgba(23, 32, 42, 0.4);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+
+.hover-dot {
+  stroke: white;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+body.no-tooltip .tooltip {
+  display: none !important;
+}
+
+body.no-tooltip .state {
+  pointer-events: none;        
+}
+
+/* step8impact */
+.impact-fill {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+ 
+.impact-viz-content {
+  width: 100%;
+  height: 100%;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  box-sizing: border-box;
+}
+ 
+/* ---------- Rows container — flex:1 撑满 + space-between 均匀分散 ---------- */
+.impact-viz-rows {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.4rem;
+  min-height: 0;
+}
+ 
+/* ---------- One row per impact ---------- */
+.impact-viz-row {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 0.85rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--border);
+}
+ 
+.impact-viz-row:first-child {
+  border-top: none;
+  padding-top: 0.3rem;
+}
+ 
+.ivr-num {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--accent-dark);
+  letter-spacing: 0.05em;
+  padding-top: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+ 
+.ivr-body { min-width: 0; }
+ 
+.ivr-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  margin-bottom: 0.25rem;
+  flex-wrap: wrap;
+}
+ 
+.ivr-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  font-weight: 800;
+  color: var(--muted);
+  min-width: 110px;
+}
+ 
+.ivr-stat {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+ 
+.ivr-unit {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  margin-left: 0.2rem;
+}
+ 
+.ivr-desc {
+  margin: 0.2rem 0 0.3rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+ 
+.ivr-cite {
+  margin: 0;
+  font-size: 0.72rem;
+  font-style: italic;
+  color: #a0a8ad;
+}
+ 
+/* ---------- Equity kicker ---------- */
+.impact-viz-equity {
+  flex: 0 0 auto;
+  padding: 0.75rem 1rem;
+  background: #fbf7f4;
+  border-left: 3px solid var(--accent-dark);
+  border-radius: 0 8px 8px 0;
+}
+ 
+.ive-tag {
+  display: block;
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  font-weight: 800;
+  color: var(--accent-dark);
+  margin-bottom: 0.3rem;
+}
+ 
+.impact-viz-equity p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text);
+  font-weight: 500;
+}
+ 
+.impact-viz-equity em {
+  color: var(--accent-dark);
+  font-style: normal;
+  font-weight: 800;
+}

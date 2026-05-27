@@ -17,14 +17,14 @@ const scenarioOrder = ["ssp126", "ssp245", "ssp585"];
 
 const metricLabels = {
   tas_change_from_2020_c: "Average temperature change from 2020",
-  hot_days_35c_change_from_2020: "Additional 35°C+ days compared with 2020",
-  hot_days_35c: "Total 35°C+ days",
+  hot_days_35c_change_from_2020: "Additional days above 35°C compared with 2020",
+  hot_days_35c: "Total days above 35°C",
 };
 
 const metricShortLabels = {
   tas_change_from_2020_c: "Average warming",
-  hot_days_35c_change_from_2020: "Additional 35°C+ days",
-  hot_days_35c: "Total 35°C+ days",
+  hot_days_35c_change_from_2020: "Additional days above 35°C",
+  hot_days_35c: "Total days above 35°C",
 };
 
 const metricUnits = {
@@ -465,7 +465,6 @@ function showTrendSummary(seriesByScenario, color) {
     rowsEl.appendChild(row);
   }
   container.classList.add("is-active");
-  // 用 rAF 触发过渡(先 display:flex 再加 is-visible 才有动画)
   requestAnimationFrame(() => {
     container.classList.add("is-visible");
   });
@@ -494,7 +493,6 @@ function showCompareSummary(rowsBySeries) {
     const series = rowsBySeries.get(cfg.name);
     if (!series || !series.length) continue;
 
-    // rawValue 本身就是"相对 2020 的变化",直接取 2070 那一年的值
     const point2070 = series.find((d) => d.year === 2070);
     const value = point2070?.rawValue ?? series[series.length - 1].rawValue;
     const sign = value >= 0 ? "+" : "";
@@ -608,7 +606,6 @@ function renderLineChart() {
 
     const grouped = d3.group(rows, (d) => d.scenario);
 
-    // —— 收集每条线的数据,供 tooltip / summary 用 ——
     const seriesByScenario = {};
     let pathsAnimating = 0;
 
@@ -638,7 +635,6 @@ function renderLineChart() {
         .on("end", () => {
           pathsAnimating -= 1;
           if (pathsAnimating === 0) {
-            // 加 300ms 延迟,让用户先看清最终的线
             setTimeout(() => {
               showTrendSummary(seriesByScenario, color);
               enableHover();
@@ -657,7 +653,6 @@ function renderLineChart() {
         .text(scenarioLabels[scenario]);
     }
 
-    // —— Hover 元素(初始隐藏)——
     const hoverLine = g.append("line")
       .attr("class", "hover-line")
       .attr("y1", 0)
@@ -674,12 +669,11 @@ function renderLineChart() {
         .style("opacity", 0);
     }
 
-    // —— 透明 rect 接收鼠标事件 ——
     const hoverRect = g.append("rect")
       .attr("width", innerWidth)
       .attr("height", innerHeight)
       .attr("fill", "transparent")
-      .style("pointer-events", "none"); // 动画结束前不响应
+      .style("pointer-events", "none"); 
 
     function enableHover() {
       hoverRect.style("pointer-events", "all");
@@ -915,7 +909,6 @@ function renderCompareLineChart() {
 function renderImpactPlaceholder() {
   hideMapYearOverlay();
 
-  // 彻底清掉 summary 残留(不靠 class 过渡,直接 DOM 操作)
   const summaryEl = document.getElementById("trend-summary");
   if (summaryEl) {
     summaryEl.classList.remove("is-active", "is-visible");
@@ -1313,7 +1306,7 @@ function renderMonthlyChart(stateName) {
     .attr("fill", "#5f6b73")
     .attr("font-size", 12)
     .attr("font-weight", 800)
-    .text(`${stateName}: monthly 35°C+ days in ${currentState.year}`);
+    .text(`${stateName}: monthly days above 35°C in ${currentState.year}`);
 
   g.append("text")
     .attr("x", innerWidth)
@@ -1617,7 +1610,7 @@ function updateSelectedStateCard(stateName, row) {
   selectedStateTitle.text(stateName);
 
   selectedStateSummary.text(
-    `By ${currentState.year} under ${scenarioLabels[currentState.scenario].toLowerCase()}, ${stateName} is projected to have ${formatValue(hotDaysChange, "days")} more 35°C+ days than in 2020.`
+    `By ${currentState.year} under ${scenarioLabels[currentState.scenario].toLowerCase()}, ${stateName} is projected to have ${formatValue(hotDaysChange, "days")} more days with daily highs above 35°C than in 2020.`
   );
 
   selectedStateWarming.text(formatValue(avgWarming, "°C"));

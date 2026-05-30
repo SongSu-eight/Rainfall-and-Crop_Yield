@@ -1414,3 +1414,1141 @@ body.intro-complete .intro-locked-cue {
     padding-bottom: 3rem;
   }
 }
+
+/* State change expectation follow-up */
+.state-change-result {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: clamp(2.5rem, 6vw, 5rem) clamp(1.2rem, 4vw, 4rem);
+  background:
+    radial-gradient(circle at 18% 15%, rgba(255, 229, 205, 0.62), transparent 32%),
+    linear-gradient(180deg, #fffaf5 0%, #f5efe7 100%);
+}
+
+.state-change-result[hidden] {
+  display: none;
+}
+
+.state-change-card {
+  width: min(1160px, 100%);
+  min-height: min(760px, calc(100vh - 5rem));
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: clamp(1rem, 2.2vw, 1.8rem);
+  padding: clamp(1.4rem, 3vw, 2.4rem);
+  border: 1px solid rgba(23, 32, 42, 0.11);
+  border-radius: 34px;
+  background: rgba(255, 255, 255, 0.80);
+  box-shadow: 0 28px 90px rgba(86, 55, 32, 0.12);
+}
+
+.state-change-copy {
+  max-width: 980px;
+}
+
+.state-change-copy h2 {
+  margin: 0.25rem 0 0.65rem;
+  font-size: clamp(2rem, 4.6vw, 4.4rem);
+  line-height: 0.97;
+  letter-spacing: -0.06em;
+  color: #17202a;
+}
+
+.state-change-copy p:not(.eyebrow) {
+  max-width: 850px;
+  margin: 0;
+  color: #5f6b73;
+  font-size: clamp(1rem, 1.55vw, 1.22rem);
+  line-height: 1.55;
+}
+
+.state-change-blocks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1rem, 2vw, 1.6rem);
+  align-items: stretch;
+}
+
+.state-change-state-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  min-height: 355px;
+  padding: clamp(1.1rem, 2vw, 1.65rem);
+  border-radius: 28px;
+  border: 1px solid rgba(23, 32, 42, 0.10);
+  background: rgba(255, 255, 255, 0.78);
+  overflow: hidden;
+}
+
+.state-change-state-card.is-top {
+  border-color: rgba(196, 81, 44, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(196, 81, 44, 0.14);
+}
+
+.state-change-state-card.is-selected {
+  border-color: rgba(79, 143, 192, 0.30);
+}
+
+.state-change-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.state-change-card-header span {
+  display: inline-flex;
+  padding: 0.35rem 0.62rem;
+  border-radius: 999px;
+  background: rgba(23, 32, 42, 0.07);
+  color: #5f6b73;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.state-change-card-header h3 {
+  margin: 0.45rem 0 0;
+  color: #17202a;
+  font-size: clamp(1.55rem, 3vw, 2.65rem);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+.state-change-year-pill {
+  flex: 0 0 auto;
+  min-width: 72px;
+  padding: 0.55rem 0.7rem;
+  border-radius: 18px;
+  background: #17202a;
+  color: #fffaf5;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.state-change-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-top: 1.05rem;
+}
+
+.state-change-value-row strong {
+  color: #c4512c;
+  font-size: clamp(2.5rem, 5.2vw, 4.8rem);
+  line-height: 0.9;
+  letter-spacing: -0.07em;
+}
+
+.state-change-value-row small {
+  color: #5f6b73;
+  font-weight: 800;
+}
+
+.state-change-tiles {
+  align-self: end;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 7px;
+  margin-top: 1.1rem;
+}
+
+.state-change-tiles span {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background: #f0e8df;
+  border: 1px solid rgba(23, 32, 42, 0.06);
+  transition: background-color 220ms ease, opacity 220ms ease, transform 220ms ease;
+}
+
+.state-change-tiles span.is-filled {
+  background: #c4512c;
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.state-change-state-note {
+  margin-top: 0.75rem;
+  color: #6d767d;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.state-change-note {
+  margin: 0;
+  color: #7a858d;
+  font-size: 0.9rem;
+  font-style: italic;
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .state-change-blocks {
+    grid-template-columns: 1fr;
+  }
+
+  .state-change-card {
+    min-height: auto;
+  }
+}
+
+/* State-change follow-up: state-shape map cards */
+.state-change-blocks {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(0.9rem, 1.8vw, 1.35rem);
+  align-items: stretch;
+}
+
+.state-change-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.70);
+  border: 1px solid rgba(23, 32, 42, 0.10);
+}
+
+.state-change-play-toggle {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.72rem 1.15rem;
+  background: #17202a;
+  color: #fffaf5;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  min-width: 92px;
+}
+
+.state-change-slider-wrap {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.42rem;
+  flex: 1;
+  min-width: 280px;
+  color: #5f6b73;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.state-change-slider-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+
+.state-change-slider-label {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.state-change-year-output {
+  min-width: 4.4rem;
+  padding: 0.28rem 0.72rem;
+  border-radius: 999px;
+  background: rgba(196, 81, 44, 0.12);
+  color: #8f2f1b;
+  font-size: 0.95rem;
+  font-weight: 950;
+  text-align: center;
+}
+
+.state-change-slider-wrap input[type="range"] {
+  width: 100%;
+  height: 0.55rem;
+  accent-color: #c4512c;
+  cursor: pointer;
+}
+
+.state-change-slider-wrap input[type="range"]:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.state-change-slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  color: #9a8b7a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0 0.1rem;
+}
+
+.state-change-slider-help {
+  color: #7a858d;
+  font-size: 0.86rem;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.state-change-map-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1rem, 2vw, 1.6rem);
+  align-items: stretch;
+}
+
+.state-change-state-card.state-shape-card {
+  min-height: 430px;
+  grid-template-rows: auto minmax(190px, 1fr) auto auto;
+}
+
+.state-shape-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 0.8rem 0 0.6rem;
+  min-height: 205px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 40% 35%, rgba(255,255,255,0.90), transparent 35%),
+    rgba(245, 239, 231, 0.72);
+  border: 1px solid rgba(23, 32, 42, 0.08);
+  overflow: hidden;
+}
+
+.state-shape-svg {
+  width: 100%;
+  height: 100%;
+  min-height: 190px;
+}
+
+.state-shape-path {
+  filter: drop-shadow(0 14px 22px rgba(86, 55, 32, 0.16));
+  transition: fill 260ms ease;
+}
+
+.state-shape-card .state-change-value-row {
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 860px) {
+  .state-change-map-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .state-change-controls {
+    flex-wrap: wrap;
+  }
+
+  .state-change-slider-wrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .state-change-slider-help {
+    white-space: normal;
+  }
+}
+
+/* Transition from personalized state check to national Plot 01 */
+.us-transition {
+  min-height: 62vh;
+  display: grid;
+  place-items: center;
+  padding: clamp(3.2rem, 7vw, 6rem) 8vw;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(196, 81, 44, 0.12), transparent 24rem),
+    linear-gradient(180deg, #f5efe7 0%, #fff8f0 62%, rgba(247, 249, 249, 0.98) 100%);
+  text-align: center;
+}
+
+.us-transition-inner {
+  width: min(960px, 100%);
+}
+
+.us-transition h2 {
+  margin: 0;
+  color: #17202a;
+  font-size: clamp(2.4rem, 6vw, 5.8rem);
+  line-height: 0.95;
+  letter-spacing: -0.07em;
+}
+
+.us-transition p:not(.eyebrow) {
+  max-width: 760px;
+  margin: 1.05rem auto 0;
+  color: #5f6b73;
+  font-size: clamp(1rem, 1.55vw, 1.28rem);
+  line-height: 1.55;
+}
+
+.state-change-continue {
+  justify-self: center;
+  appearance: none;
+  margin-top: 0.25rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.82rem 1.35rem;
+  background: #17202a;
+  color: #fffaf5;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 14px 28px rgba(23, 32, 42, 0.16);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.state-change-continue:hover,
+.state-change-continue:focus-visible {
+  transform: translateY(-1px);
+  background: #243241;
+  box-shadow: 0 18px 34px rgba(23, 32, 42, 0.20);
+  outline: none;
+}
+
+@media (max-width: 860px) {
+  .us-transition {
+    min-height: 54vh;
+    padding-inline: 1.4rem;
+  }
+}
+
+
+/* Immersive intro/results refinement: reduce heavy card surfaces */
+.expectation-result {
+  max-width: none;
+  padding: clamp(2rem, 5vh, 4rem) 7vw;
+  background:
+    radial-gradient(circle at 75% 20%, rgba(196, 81, 44, 0.10), transparent 30rem),
+    linear-gradient(180deg, #ffeadb 0%, #fff8f0 56%, #f5efe7 100%);
+}
+
+.expectation-result-card {
+  width: min(1260px, 100%);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  align-items: center;
+}
+
+.expectation-result-copy {
+  min-height: auto;
+  padding: clamp(1.25rem, 2.4vw, 2rem);
+  border-radius: 28px;
+  background: rgba(255, 248, 240, 0.58);
+  border: 1px solid rgba(143, 47, 27, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.expectation-result-values {
+  align-content: center;
+}
+
+.expectation-value-card {
+  background: rgba(255, 248, 240, 0.48);
+  border-color: rgba(143, 47, 27, 0.10);
+  box-shadow: none;
+  backdrop-filter: blur(10px);
+}
+
+.expectation-value-card.is-closest {
+  background: rgba(255, 234, 219, 0.66);
+  border-color: rgba(196, 81, 44, 0.32);
+}
+
+.state-change-result {
+  background:
+    radial-gradient(circle at 22% 20%, rgba(196, 81, 44, 0.12), transparent 32rem),
+    radial-gradient(circle at 82% 72%, rgba(136, 178, 196, 0.14), transparent 28rem),
+    linear-gradient(180deg, #f5efe7 0%, #fff8f0 72%, #f7f9f9 100%);
+}
+
+.state-change-card {
+  width: min(1240px, 100%);
+  min-height: min(820px, calc(100vh - 4rem));
+  padding: clamp(1rem, 2.4vw, 2rem) 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.state-change-copy {
+  max-width: 980px;
+  padding: clamp(1.15rem, 2.2vw, 1.75rem);
+  border-radius: 28px;
+  background: rgba(255, 248, 240, 0.56);
+  border: 1px solid rgba(143, 47, 27, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.state-change-controls {
+  justify-self: start;
+  background: rgba(255, 248, 240, 0.54);
+  border-color: rgba(143, 47, 27, 0.10);
+  backdrop-filter: blur(10px);
+}
+
+.state-change-state-card.state-shape-card {
+  background: rgba(255, 248, 240, 0.42);
+  border-color: rgba(143, 47, 27, 0.10);
+  box-shadow: none;
+  backdrop-filter: blur(10px);
+}
+
+.state-shape-stage {
+  background:
+    radial-gradient(circle at 40% 35%, rgba(255,248,240,0.86), transparent 35%),
+    rgba(245, 239, 231, 0.42);
+}
+
+.state-change-note {
+  padding: 0.25rem 0.5rem;
+}
+
+.state-change-continue {
+  display: none !important;
+}
+
+.us-transition {
+  min-height: 58vh;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(196, 81, 44, 0.12), transparent 24rem),
+    linear-gradient(180deg, #fff8f0 0%, rgba(247, 249, 249, 0.98) 100%);
+}
+
+.us-transition-inner {
+  width: min(980px, 100%);
+}
+
+.us-transition p:not(.eyebrow) {
+  background: rgba(255, 248, 240, 0.52);
+  border: 1px solid rgba(143, 47, 27, 0.10);
+  border-radius: 999px;
+  padding: 0.9rem 1.15rem;
+  backdrop-filter: blur(10px);
+}
+
+/* Improved state-change playback slider */
+.state-change-slider-wrap input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(196,81,44,0.28), rgba(196,81,44,0.10));
+  border: 1px solid rgba(143,47,27,0.16);
+  padding: 0;
+}
+
+.state-change-slider-wrap input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: #c4512c;
+  border: 3px solid #fff8f0;
+  box-shadow: 0 0.18rem 0.6rem rgba(143,47,27,0.28);
+}
+
+.state-change-slider-wrap input[type="range"]::-moz-range-thumb {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: #c4512c;
+  border: 3px solid #fff8f0;
+  box-shadow: 0 0.18rem 0.6rem rgba(143,47,27,0.28);
+}
+
+.state-change-slider-wrap input[type="range"]:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.state-change-slider-wrap input[type="range"]:disabled::-webkit-slider-thumb {
+  background: #9a8b7a;
+}
+
+.state-change-slider-wrap input[type="range"]:disabled::-moz-range-thumb {
+  background: #9a8b7a;
+}
+
+/* Align the state-change year pill, slider thumb, and tick labels. */
+.state-change-slider-wrap {
+  position: relative;
+  --state-year-progress-ratio: 0;
+}
+
+.state-change-slider-top {
+  min-height: 1.6rem;
+}
+
+.state-change-year-output {
+  position: absolute;
+  top: 1.55rem;
+  left: calc(0.575rem + (100% - 1.15rem) * var(--state-year-progress-ratio));
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.state-change-slider-wrap input[type="range"] {
+  width: calc(100% - 1.15rem);
+  margin: 1.55rem 0.575rem 0;
+  box-sizing: border-box;
+}
+
+.state-change-slider-ticks {
+  width: calc(100% - 1.15rem);
+  margin: 0.28rem 0.575rem 0;
+  padding: 0;
+}
+
+/* Final fix: make the state-change slider, year pill, and tick labels share one real width. */
+.state-change-controls {
+  align-items: center;
+}
+
+.state-change-slider-wrap {
+  flex: 1 1 560px;
+  min-width: 420px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.38rem;
+  position: relative;
+  --state-year-progress-ratio: 0;
+}
+
+.state-change-slider-label {
+  display: block;
+  color: #5f6b73;
+  font-size: 0.88rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.state-change-slider-body {
+  position: relative;
+  width: 100%;
+  padding-top: 2.05rem;
+}
+
+.state-change-year-output {
+  position: absolute;
+  top: 0;
+  left: calc(var(--state-year-progress-ratio) * 100%);
+  transform: translateX(-50%);
+  min-width: 4.4rem;
+  padding: 0.28rem 0.72rem;
+  border-radius: 999px;
+  background: rgba(196, 81, 44, 0.12);
+  color: #8f2f1b;
+  font-size: 0.95rem;
+  font-weight: 950;
+  text-align: center;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.state-change-year-output:first-child {
+  transform: translateX(0);
+}
+
+.state-change-slider-wrap input[type="range"] {
+  display: block;
+  width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.state-change-slider-ticks {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin: 0.45rem 0 0;
+  padding: 0;
+  color: #9a8b7a;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.state-change-slider-ticks span {
+  text-align: center;
+}
+
+.state-change-slider-ticks span:first-child {
+  text-align: left;
+}
+
+.state-change-slider-ticks span:last-child {
+  text-align: right;
+}
+
+.state-change-slider-help {
+  color: #7a858d;
+  font-size: 0.86rem;
+  font-style: italic;
+  white-space: normal;
+}
+
+@media (max-width: 760px) {
+  .state-change-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .state-change-slider-wrap {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+/* Slider alignment final override: remove global input max-width and align pill/ticks to the real range track. */
+.state-change-slider-wrap input[type="range"] {
+  max-width: none !important;
+}
+
+.state-change-slider-body {
+  --state-thumb-size: 1.15rem;
+  position: relative;
+  width: 100%;
+  padding-top: 2.15rem;
+}
+
+.state-change-slider-body .state-change-year-output {
+  position: absolute;
+  top: 0;
+  left: calc((var(--state-thumb-size) / 2) + (100% - var(--state-thumb-size)) * var(--state-year-progress-ratio));
+  transform: translateX(-50%);
+  z-index: 3;
+}
+
+.state-change-slider-body .state-change-year-output:first-child {
+  transform: translateX(-50%);
+}
+
+.state-change-slider-body input[type="range"] {
+  display: block;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+
+.state-change-slider-body .state-change-slider-ticks {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin: 0.55rem 0 0;
+  padding: 0 calc(var(--state-thumb-size) / 2);
+  box-sizing: border-box;
+}
+
+.state-change-slider-body .state-change-slider-ticks span {
+  text-align: center;
+}
+
+.state-change-slider-body .state-change-slider-ticks span:first-child,
+.state-change-slider-body .state-change-slider-ticks span:last-child {
+  text-align: center;
+}
+
+/* Place the active year beside the YEAR label instead of floating above the slider. */
+.state-change-slider-top {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  min-height: 2rem;
+}
+
+.state-change-slider-top .state-change-slider-label {
+  display: inline-flex !important;
+  margin: 0 !important;
+}
+
+.state-change-slider-top .state-change-year-output {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  min-width: 4.2rem;
+  padding: 0.28rem 0.72rem;
+  border-radius: 999px;
+  background: rgba(196, 81, 44, 0.12);
+  color: #8f2f1b;
+  font-size: 0.95rem;
+  font-weight: 950;
+  text-align: center;
+}
+
+.state-change-slider-body {
+  padding-top: 0 !important;
+}
+
+.state-change-slider-body .state-change-year-output {
+  display: none !important;
+}
+
+/* Final slider alignment: tick labels use the same visual track width as the range input. */
+.state-change-slider-wrap input[type="range"] {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+.state-change-slider-body {
+  width: 100% !important;
+  padding-top: 0 !important;
+}
+.state-change-slider-ticks,
+.state-change-slider-body .state-change-slider-ticks {
+  display: flex !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0.55rem 0 0 !important;
+  box-sizing: border-box !important;
+}
+.state-change-slider-ticks span,
+.state-change-slider-body .state-change-slider-ticks span {
+  flex: 0 0 auto !important;
+  text-align: center !important;
+  transform: none !important;
+}
+.state-change-slider-ticks span:first-child,
+.state-change-slider-body .state-change-slider-ticks span:first-child {
+  text-align: left !important;
+}
+.state-change-slider-ticks span:last-child,
+.state-change-slider-body .state-change-slider-ticks span:last-child {
+  text-align: right !important;
+}
+
+/* Keep newly added explanation steps immersive instead of card-like. */
+.state-temperature-small-multiples text,
+.threshold-explanation-viz text {
+  paint-order: stroke;
+  stroke: rgba(250, 244, 236, 0.55);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+.temp-state-panel path {
+  filter: drop-shadow(0 10px 18px rgba(42, 27, 18, 0.10));
+}
+
+/* Immersive layout pass: reduce PPT/card feel and let visuals live on the page. */
+:root {
+  --glass-bg: rgba(255, 248, 240, 0.48);
+  --glass-bg-soft: rgba(255, 248, 240, 0.30);
+  --glass-border: rgba(143, 47, 27, 0.10);
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(196, 81, 44, 0.10), transparent 34rem),
+    radial-gradient(circle at 90% 36%, rgba(136, 178, 196, 0.16), transparent 30rem),
+    linear-gradient(180deg, #fff8f0 0%, #f7f1ea 36%, #edf2f4 100%);
+}
+
+/* Main scrollytelling no longer sits inside a heavy card. */
+.scrolly {
+  max-width: none;
+  width: 100%;
+  grid-template-columns: minmax(560px, 61vw) minmax(340px, 39vw);
+  gap: clamp(1rem, 2vw, 2rem);
+  padding: 0 clamp(1.1rem, 3vw, 3rem) 5rem;
+}
+
+.graphic {
+  top: 0;
+  height: 100vh;
+}
+
+.sticky-viz {
+  height: 100vh;
+  padding: clamp(0.8rem, 1.4vw, 1.35rem);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  grid-template-rows: auto minmax(460px, 1fr) auto;
+}
+
+.viz-header,
+.legend-row {
+  width: fit-content;
+  max-width: min(980px, 100%);
+  padding: 0.82rem 1rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 22px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  box-shadow: none;
+}
+
+.viz-header {
+  align-items: flex-start;
+}
+
+.chart-wrap {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+#main-chart {
+  min-height: 520px;
+}
+
+.placeholder-legend,
+.trend-summary,
+.map-year-overlay {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: none;
+  backdrop-filter: blur(10px);
+}
+
+.placeholder-legend {
+  font-family: inherit;
+  border-radius: 999px;
+}
+
+.trend-summary {
+  border-radius: 22px;
+}
+
+.story {
+  position: relative;
+}
+
+.step {
+  min-height: 96vh;
+  padding: 8vh 0 8vh clamp(0.4rem, 1vw, 1rem);
+  opacity: 0.18;
+}
+
+.step.is-active {
+  opacity: 1;
+}
+
+.step-number {
+  width: fit-content;
+  padding: 0.38rem 0.64rem;
+  border-radius: 999px;
+  background: rgba(255, 248, 240, 0.34);
+  border: 1px solid rgba(143, 47, 27, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.step h2 {
+  max-width: 620px;
+}
+
+.step p:not(.step-number) {
+  width: fit-content;
+  max-width: 560px;
+  padding: 0.9rem 1rem;
+  border-radius: 20px;
+  background: var(--glass-bg-soft);
+  border: 1px solid rgba(143, 47, 27, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.step.is-active h2 {
+  text-shadow: 0 1px 0 rgba(255, 248, 240, 0.42);
+}
+
+/* Intro and personalized sections: keep explanatory text translucent, not boxed like slides. */
+.expectation-intro,
+.expectation-result-copy,
+.state-change-copy,
+.us-transition p:not(.eyebrow) {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: none;
+  backdrop-filter: blur(12px);
+}
+
+.expectation-intro {
+  padding: 0.95rem 1rem;
+}
+
+.expectation-result-card,
+.state-change-card {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.expectation-value-card {
+  min-height: 86px;
+  border: 0;
+  border-left: 3px solid rgba(143, 47, 27, 0.16);
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.expectation-value-card.is-closest {
+  border-left-color: var(--accent);
+  background: rgba(255, 234, 219, 0.36);
+  border-radius: 16px;
+}
+
+.state-change-state-card.state-shape-card,
+.state-shape-stage {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.state-change-map-cards {
+  gap: clamp(0.5rem, 1vw, 1rem);
+}
+
+.state-change-controls {
+  border-radius: 999px;
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+}
+
+.state-change-play-toggle {
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+.state-change-play-toggle:hover,
+.state-change-play-toggle:focus-visible {
+  transform: translateY(-1px);
+  background: #243241;
+}
+
+/* Detail/explore area flatter and more web-like. */
+.daily-card,
+.monthly-chart-card,
+.detail-card,
+.explore-card {
+  background: var(--glass-bg-soft) !important;
+  border-color: var(--glass-border) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(10px);
+}
+
+/* SVG labels should feel integrated, not boxed. */
+.translation-card-viz > rect:first-child {
+  opacity: 0.22;
+}
+.hotday-state-panel text,
+.threshold-state-panel text,
+.threshold-explanation-viz text,
+.state-hotday-small-multiples text {
+  paint-order: stroke;
+  stroke: rgba(255, 248, 240, 0.62);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+}
+.hotday-state-panel .mini-state-shape,
+.threshold-state-panel path,
+.temp-state-panel path {
+  filter: drop-shadow(0 12px 20px rgba(42, 27, 18, 0.11));
+}
+
+/* Keep controls interactive without dominating the page. */
+.controls label,
+select {
+  background: rgba(255, 248, 240, 0.42);
+  border-radius: 12px;
+}
+select {
+  border-color: rgba(143, 47, 27, 0.12);
+}
+input[type="range"] {
+  cursor: pointer;
+}
+
+@media (max-width: 980px) {
+  .scrolly {
+    display: block;
+    padding: 0 1rem 4rem;
+  }
+  .graphic {
+    position: sticky;
+    top: 0;
+    height: 62vh;
+    z-index: 1;
+  }
+  .sticky-viz {
+    height: 62vh;
+    grid-template-rows: auto 1fr auto;
+  }
+  .story {
+    position: relative;
+    z-index: 2;
+  }
+  .step {
+    min-height: 68vh;
+  }
+}
+
+/* Final state-change slider tick alignment: tick labels line up with the thumb centers. */
+.state-change-slider-body {
+  --state-thumb-size: 1.15rem;
+}
+.state-change-slider-body .state-change-slider-ticks {
+  display: grid !important;
+  grid-template-columns: repeat(5, 1fr) !important;
+  width: 100% !important;
+  padding: 0 calc(var(--state-thumb-size) / 2) !important;
+  margin: 0.55rem 0 0 !important;
+  box-sizing: border-box !important;
+}
+.state-change-slider-body .state-change-slider-ticks span,
+.state-change-slider-body .state-change-slider-ticks span:first-child,
+.state-change-slider-body .state-change-slider-ticks span:last-child {
+  text-align: center !important;
+  transform: none !important;
+}
+
+/* Final refinement: align state-change slider ticks to the actual range track. */
+.state-change-slider-wrap input[type="range"] {
+  width: 100% !important;
+  max-width: none !important;
+  display: block !important;
+  margin: 0 !important;
+}
+.state-change-slider-body {
+  position: relative !important;
+  width: 100% !important;
+  padding-top: 0 !important;
+}
+.state-change-slider-body .state-change-slider-ticks {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  height: 1.15rem !important;
+  padding: 0 !important;
+  margin: 0.55rem 0 0 !important;
+}
+.state-change-slider-body .state-change-slider-ticks span {
+  position: absolute !important;
+  top: 0 !important;
+  width: max-content !important;
+  text-align: center !important;
+  transform: translateX(-50%) !important;
+  font-size: 0.72rem !important;
+}
+.state-change-slider-body .state-change-slider-ticks span:nth-child(1) { left: 0% !important; transform: translateX(0) !important; }
+.state-change-slider-body .state-change-slider-ticks span:nth-child(2) { left: 25% !important; }
+.state-change-slider-body .state-change-slider-ticks span:nth-child(3) { left: 50% !important; }
+.state-change-slider-body .state-change-slider-ticks span:nth-child(4) { left: 75% !important; }
+.state-change-slider-body .state-change-slider-ticks span:nth-child(5) { left: 100% !important; transform: translateX(-100%) !important; }
+
+/* Fine tune: lift Plot 01 legend/notes slightly to reduce crowding. */
+.legend-row {
+  transform: translateY(-0.45rem);
+}

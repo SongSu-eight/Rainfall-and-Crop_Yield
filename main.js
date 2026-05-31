@@ -34,7 +34,7 @@ const scenarioOrder = ["ssp126", "ssp245", "ssp585"];
 
 const metricLabels = {
   summer_tas_c_change_from_observed_2020: "Summer average temperature change after 2020 baseline alignment",
-  summer_hot_days_35c_change_from_observed_2020: "Baseline-aligned additional 35°C+ summer days",
+  summer_hot_days_35c_change_from_observed_2020: "Baseline-aligned 5-year average additional 35°C+ summer days",
 };
 
 const metricShortLabels = {
@@ -68,7 +68,7 @@ const stepSettings = [
     subtitle:
       "The macro trend shows that average temperature rises across the U.S. But average °C is only the first layer: heat is felt as the number of days that cross an extreme threshold.",
     note:
-      "Both the °C figure and the 35°C+ day count subtract their 2020 CMIP6 source offset before comparing future change.",
+      "Both the °C figure and the summer 35°C+ day count use centered 5-year rolling averages and subtract the 2020 CMIP6 source offset before comparing future change.",
   },
   {
     view: "state-hotday-small-multiples",
@@ -79,72 +79,51 @@ const stepSettings = [
     subtitle:
       "First keep the states from the average-temperature comparison, then contrast them with the state gaining the most summer 35°C+ days by 2100.",
     note:
-      "Color shows baseline-aligned average increases in summer 35°C+ days under high emissions.",
+      "Color shows baseline-aligned 5-year average increases in summer 35°C+ days under high emissions.",
   },
   {
     view: "threshold-explanation",
     year: 2100,
     scenario: "ssp585",
     metric: "summer_hot_days_35c_change_from_observed_2020",
-    title: "The same threshold creates uneven risk",
+    title: "Extreme heat risk depends on where a state starts",
     subtitle:
-      "States do not start from the same place. A state closer to 35°C needs less warming before many more days cross the extreme-heat threshold.",
+      "Average warming pushes every state upward, but summer 35°C+ days grow fastest where that push crosses the fixed 35°C threshold.",
     note:
-      "Conceptual threshold comparison: red area represents days above 35°C; state values use the same baseline-aligned threshold-count metric.",
+      "Therefore, the rest of the story follows summer 35°C+ days directly.",
   },
   {
-    view: "map",
-    year: 2020,
-    scenario: "ssp585",
-    metric: "summer_tas_c_change_from_observed_2020",
-    title: "Now place that trend on the map",
-    subtitle:
-      "We use observed 2020 as the baseline, then map the projected summer average-temperature delta across the United States.",
-    note:
-      "Animated from observed 2020 to 2100 under high emissions. Values show change from the observed 2020 baseline.",
-    animateYears: true,
-    animationStartYear: 2020,
-    animationEndYear: 2100,
-    animationStepYears: 10,
-    animationFrameDelay: 450,
-  },
-  {
-    view: "map",
+    view: "risk-transition",
     year: 2100,
     scenario: "ssp585",
-    metric: "summer_tas_c_change_from_observed_2020",
-    title: "By 2100, the map gets warmer",
-    subtitle:
-      "Average warming delta becomes visible across many states under a high-emissions future.",
-    note:
-      "The map is warmer by 2100, but it is still showing a summer average.",
-  },
-  {
-    view: "map",
-    year: 2020,
-    scenario: "ssp585",
     metric: "summer_hot_days_35c_change_from_observed_2020",
-    title: "Now count summer 35°C+ days",
+    title: "Therefore, track the risk directly",
     subtitle:
-      "The calendar translation turns the story from average warming into days above 35°C. This map counts where those extra summer 35°C+ days appear.",
+      "Average temperature explains the background warming, but summer 35°C+ days show when heat crosses into daily exposure.",
     note:
-      "Animated from observed 2020 to 2100 under high emissions. Values show baseline-aligned additional 35°C+ summer days.",
-    animateYears: true,
-    animationStartYear: 2020,
-    animationEndYear: 2100,
-    animationStepYears: 10,
-    animationFrameDelay: 450,
+      "From here, the story follows baseline-aligned 5-year average increases in summer 35°C+ days across states.",
   },
   {
     view: "map",
     year: 2100,
     scenario: "ssp585",
     metric: "summer_hot_days_35c_change_from_observed_2020",
-    title: "Extreme heat days do not increase evenly",
+    title: "By 2100, added summer 35°C+ days spread unevenly",
     subtitle:
-      "By 2100, the largest increases appear in states that already sit near the 35°C threshold.",
+      "Under high emissions, we first pause on the full map to see the national pattern of added threshold-crossing heat.",
     note:
-      "The same average-warming future can create very different daily heat risks.",
+      "Static view: baseline-aligned 5-year average increase in summer 35°C+ days by 2100.",
+  },
+  {
+    view: "map",
+    year: 2100,
+    scenario: "ssp585",
+    metric: "summer_hot_days_35c_change_from_observed_2020",
+    title: "The darkest states are not random outliers",
+    subtitle:
+      "Scroll one step further and the map highlights the states with the largest added summer 35°C+ days. Possible reasons include starting closer to the 35°C threshold, hotter summer baselines, and regional warming that pushes more days across the line.",
+    note:
+      "Highlighted states have the largest baseline-aligned 5-year average increases in summer 35°C+ days by 2100.",
     highlight: "top",
   },
   {
@@ -152,9 +131,9 @@ const stepSettings = [
     year: 2100,
     scenario: "ssp585",
     metric: "summer_hot_days_35c_change_from_observed_2020",
-    title: "Impact layer placeholder",
+    title: "What would those extra summer 35°C+ days change?",
     subtitle:
-      "This section will connect extra summer 35°C+ days to daily-life impacts.",
+      "This section connects extra summer 35°C+ days to daily-life impacts.",
     note:
       "daily-life examples",
   },
@@ -207,6 +186,9 @@ let highEmissionStateChangeCache = null;
 let highEmissionHotdayStateChangeCache = null;
 let hotDayAlignmentBaselineCache = null;
 let monthlyHotDayAlignmentBaselineCache = null;
+let hotDayRollingLookupCache = null;
+let monthlyHotDayRollingLookupCache = null;
+let renderCycleId = 0;
 let stateHotdaySmallMultipleTimer = null;
 
 function clearStoryTimers() {
@@ -778,25 +760,42 @@ function renderStateChangeControls() {
   const sliderBody = sliderWrap.append("div")
     .attr("class", "state-change-slider-body");
 
-  sliderBody
-    .append("input")
+  const customSlider = sliderBody
+    .append("div")
     .attr("id", "state-change-year-slider")
-    .attr("type", "range")
-    .attr("min", START_YEAR)
-    .attr("max", END_YEAR)
-    .attr("step", 1)
-    .attr("value", START_YEAR)
-    .property("disabled", true)
-    .on("input", function() {
-      const year = +this.value;
+    .attr("class", "state-change-custom-slider is-disabled")
+    .attr("role", "slider")
+    .attr("aria-valuemin", START_YEAR)
+    .attr("aria-valuemax", END_YEAR)
+    .attr("aria-valuenow", START_YEAR)
+    .attr("aria-disabled", "true")
+    .attr("tabindex", 0);
+
+  customSlider.append("div")
+    .attr("class", "state-change-custom-track");
+
+  customSlider.append("div")
+    .attr("class", "state-change-custom-fill");
+
+  customSlider.append("div")
+    .attr("class", "state-change-custom-thumb");
+
+  customSlider
+    .on("pointerdown", stateChangeSliderPointerDown)
+    .on("keydown", stateChangeSliderKeydown);
+
+  sliderBody.append("div")
+    .attr("class", "state-change-slider-ticks")
+    .html('<button type="button" data-year="2020">2020</button><button type="button" data-year="2040">2040</button><button type="button" data-year="2060">2060</button><button type="button" data-year="2080">2080</button><button type="button" data-year="2100">2100</button>');
+
+  sliderBody.selectAll(".state-change-slider-ticks button")
+    .on("click", function() {
+      if (!stateChangePaused) return;
+      const year = +this.dataset.year;
       stateChangeCurrentYear = year;
       setStateChangeControlYear(year);
       updateStateChangeMapCards(stateChangeLoopCards, year);
     });
-
-  sliderBody.append("div")
-    .attr("class", "state-change-slider-ticks")
-    .html("<span>2020</span><span>2040</span><span>2060</span><span>2080</span><span>2100</span>");
 
   sliderWrap
     .append("div")
@@ -808,10 +807,70 @@ function setStateChangeControlYear(year) {
   const boundedYear = Math.max(START_YEAR, Math.min(END_YEAR, Number(year) || START_YEAR));
   const progressRatio = (boundedYear - START_YEAR) / (END_YEAR - START_YEAR);
 
-  d3.select("#state-change-year-slider").property("value", boundedYear);
+  d3.select("#state-change-year-slider").attr("aria-valuenow", boundedYear);
   d3.select("#state-change-year-output").text(boundedYear);
   d3.select(".state-change-slider-wrap")
     .style("--state-year-progress-ratio", progressRatio);
+}
+
+
+function setStateChangeSliderDisabled(disabled) {
+  const slider = d3.select("#state-change-year-slider");
+  if (slider.empty()) return;
+  slider
+    .classed("is-disabled", !!disabled)
+    .attr("aria-disabled", disabled ? "true" : "false")
+    .attr("tabindex", disabled ? -1 : 0);
+}
+
+function setStateChangeYearFromRatio(ratio) {
+  if (!stateChangePaused) return;
+  const clamped = Math.max(0, Math.min(1, ratio));
+  const year = Math.round(START_YEAR + clamped * (END_YEAR - START_YEAR));
+  stateChangeCurrentYear = year;
+  setStateChangeControlYear(year);
+  updateStateChangeMapCards(stateChangeLoopCards, year);
+}
+
+function stateChangeSliderPointerDown(event) {
+  if (!stateChangePaused) return;
+  const sliderNode = event.currentTarget;
+  sliderNode.setPointerCapture?.(event.pointerId);
+
+  const updateFromEvent = (evt) => {
+    const rect = sliderNode.getBoundingClientRect();
+    const ratio = rect.width ? (evt.clientX - rect.left) / rect.width : 0;
+    setStateChangeYearFromRatio(ratio);
+  };
+
+  updateFromEvent(event);
+
+  const move = (evt) => updateFromEvent(evt);
+  const up = (evt) => {
+    sliderNode.releasePointerCapture?.(evt.pointerId);
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+  };
+
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up, { once: true });
+}
+
+function stateChangeSliderKeydown(event) {
+  if (!stateChangePaused) return;
+  let nextYear = stateChangeCurrentYear || START_YEAR;
+  if (event.key === "ArrowLeft") nextYear -= 1;
+  else if (event.key === "ArrowRight") nextYear += 1;
+  else if (event.key === "PageDown") nextYear -= 10;
+  else if (event.key === "PageUp") nextYear += 10;
+  else if (event.key === "Home") nextYear = START_YEAR;
+  else if (event.key === "End") nextYear = END_YEAR;
+  else return;
+
+  event.preventDefault();
+  stateChangeCurrentYear = Math.max(START_YEAR, Math.min(END_YEAR, nextYear));
+  setStateChangeControlYear(stateChangeCurrentYear);
+  updateStateChangeMapCards(stateChangeLoopCards, stateChangeCurrentYear);
 }
 
 function renderStateShapeCards(cards) {
@@ -904,7 +963,7 @@ function startStateChangeLoop(cards, years) {
   stateChangeCurrentYear = START_YEAR;
 
   d3.select("#state-change-play-toggle").text("Pause");
-  d3.select("#state-change-year-slider").property("disabled", true);
+  setStateChangeSliderDisabled(true);
   setStateChangeControlYear(START_YEAR);
   updateStateChangeMapCards(cards, START_YEAR);
 
@@ -959,7 +1018,7 @@ function playStateChangeLoopFromCurrent(startImmediately = true) {
 
   stateChangePaused = false;
   d3.select("#state-change-play-toggle").text("Pause");
-  d3.select("#state-change-year-slider").property("disabled", true);
+  setStateChangeSliderDisabled(true);
 
   const current = Number.isFinite(stateChangeCurrentYear) ? stateChangeCurrentYear : START_YEAR;
   const nextIndex = stateChangeLoopYears.findIndex((y) => y > current);
@@ -1004,7 +1063,7 @@ function stopStateChangeLoop() {
   stateChangeStartDelayTimer = null;
   stateChangePaused = true;
   d3.select("#state-change-play-toggle").text("Start");
-  d3.select("#state-change-year-slider").property("disabled", false);
+  setStateChangeSliderDisabled(false);
   setStateChangeControlYear(stateChangeCurrentYear);
 }
 
@@ -1191,7 +1250,7 @@ function updateStep(step) {
   mapNote.text(setting.note);
 
   d3.select("body")
-    .classed("explore-mode", step === 9)
+    .classed("explore-mode", step === 8)
     .classed("text-break-active", setting.view === "text-break");
 
   syncControls();
@@ -1204,6 +1263,7 @@ function updateStep(step) {
 }
 
 function updateMainView() {
+  renderCycleId += 1;
   cancelMapAnimation();
   cancelStateHotdaySmallMultipleAnimation();
   hideTooltip();
@@ -1212,7 +1272,9 @@ function updateMainView() {
   svg.style("display", null);
   d3.select(".chart-wrap").selectAll(".impact-fill").remove();
   const summaryEl = document.getElementById("trend-summary");
-  if (summaryEl) summaryEl.style.display = ""; 
+  if (summaryEl && !new Set(["line", "summer-change-line", "compare-line"]).has(currentState.view)) {
+    summaryEl.style.display = "none";
+  }
   // step8-move summary
 
   const setting = stepSettings[currentStep];
@@ -1239,6 +1301,8 @@ function updateMainView() {
     renderStateHotdaySmallMultiples();
   } else if (currentState.view === "threshold-explanation") {
     renderThresholdExplanation();
+  } else if (currentState.view === "risk-transition") {
+    renderRiskTransition();
   } else if (currentState.view === "compare-line") {
     renderCompareLineChart();
   } else if (currentState.view === "impact-placeholder") {
@@ -1251,7 +1315,7 @@ function updateMainView() {
 }
 
 function updateManualTitle() {
-  if (currentStep !== 9) return;
+  if (currentStep !== 8) return;
 
   title.text(`${metricLabels[currentState.metric]} in ${currentState.year}`);
   subtitle.text(
@@ -1292,11 +1356,13 @@ function drawMapYearLabel() {
 /* ---------------------------------- */
 /* ---------------------------------- */
 
-function showTrendSummary(seriesByScenario, color) {
+function showTrendSummary(seriesByScenario, color, cycleId = renderCycleId) {
+  if (cycleId !== renderCycleId || currentState.view !== "line") return;
   const container = document.getElementById("trend-summary");
   const rowsEl = document.getElementById("trend-summary-rows");
   if (!container || !rowsEl) return;
 
+  container.style.display = "";
   rowsEl.innerHTML = "";
   const summaryLabel = container.querySelector(".trend-summary-label");
   if (summaryLabel) summaryLabel.textContent = "Aligned baseline temperature";
@@ -1325,13 +1391,18 @@ function hideTrendSummary() {
   if (!el) return;
   el.classList.remove("is-visible");
   el.classList.remove("is-active");
+  el.style.display = "none";
+  const rowsEl = document.getElementById("trend-summary-rows");
+  if (rowsEl) rowsEl.innerHTML = "";
 }
 
-function showCompareSummary(rowsBySeries) {
+function showCompareSummary(rowsBySeries, cycleId = renderCycleId) {
+  if (cycleId !== renderCycleId || currentState.view !== "compare-line") return;
   const container = document.getElementById("trend-summary");
   const rowsEl = document.getElementById("trend-summary-rows");
   if (!container || !rowsEl) return;
 
+  container.style.display = "";
   rowsEl.innerHTML = "";
   const summaryLabel = container.querySelector(".trend-summary-label");
   if (summaryLabel) summaryLabel.textContent = "Scenario change by 2100";
@@ -1368,6 +1439,7 @@ function showCompareSummary(rowsBySeries) {
 /* ---------------------------------- */
 /* ---------------------------------- */
 function renderLineChart() {
+  const chartCycleId = renderCycleId;
   hideTrendSummary();
   hideMapYearOverlay();
   setVizMode("line");
@@ -1718,7 +1790,7 @@ function renderLineChart() {
         if (scenario === scenarioOrder[scenarioOrder.length - 1]) {
           setTimeout(() => {
             addLineAnnotations();
-            showTrendSummary(seriesByScenario, color);
+            showTrendSummary(seriesByScenario, color, chartCycleId);
             enableHover();
           }, 250);
         }
@@ -1912,11 +1984,13 @@ function renderLineChart() {
 }
 
 
-function showSummerChangeSummary(seriesByScenario, color) {
+function showSummerChangeSummary(seriesByScenario, color, cycleId = renderCycleId) {
+  if (cycleId !== renderCycleId || currentState.view !== "summer-change-line") return;
   const container = document.getElementById("trend-summary");
   const rowsEl = document.getElementById("trend-summary-rows");
   if (!container || !rowsEl) return;
 
+  container.style.display = "";
   rowsEl.innerHTML = "";
   const summaryLabel = container.querySelector(".trend-summary-label");
   if (summaryLabel) summaryLabel.textContent = "Scenario change by 2100";
@@ -2010,6 +2084,7 @@ function getSummerChangeNationalRows() {
 }
 
 function renderSummerChangeLineChart() {
+  const chartCycleId = renderCycleId;
   hideTrendSummary();
   hideMapYearOverlay();
   setVizMode("summer-change-line");
@@ -2303,7 +2378,7 @@ function renderSummerChangeLineChart() {
         if (scenario === scenarioOrder[scenarioOrder.length - 1]) {
           setTimeout(() => {
             addLineAnnotations();
-            showSummerChangeSummary(seriesByScenario, color);
+            showSummerChangeSummary(seriesByScenario, color, chartCycleId);
             enableHover();
           }, 250);
         }
@@ -2737,7 +2812,7 @@ function renderTranslationCard() {
     .attr("font-size", 44)
     .attr("font-weight", 900)
     .attr("letter-spacing", "-0.055em")
-    .text(`${d3.format("+.0f")(hotDaysRounded)} days`);
+    .text(`${d3.format("+.1f")(hotDays)} days`);
 
   g.append("text")
     .attr("x", rightX)
@@ -2803,7 +2878,7 @@ function renderTranslationCard() {
     .attr("fill", (d) => d.blocks > 0 ? "#c4512c" : "#9aa3aa")
     .attr("font-size", 9.5)
     .attr("font-weight", 900)
-    .text((d) => d.blocks > 0 ? `+${d.blocks}` : "0");
+    .text((d) => d.value > 0 ? d3.format("+.1f")(d.value) : "0.0");
 
   const blockData = monthCards.flatMap((monthCard) =>
     d3.range(monthCard.blocks).map((j) => ({
@@ -2844,7 +2919,7 @@ function renderTranslationCard() {
 
   [
     "Blocks wrap after 7 per row; more filled blocks mean",
-    "more projected extra summer 35°C+ days in that month."
+    "more 5-year avg. extra summer 35°C+ days in that month."
   ].forEach((line, i) => {
     monthNote.append("tspan")
       .attr("x", calX)
@@ -2936,7 +3011,7 @@ function distributeBlocksAcrossMonths(monthValues, totalBlocks) {
 function getMonthlyHotDayDistributionForTranslation(totalBlocks) {
   const monthlyRows = monthlyData.filter((d) =>
     d.scenario === "ssp585" &&
-    d.year >= 2020 && d.year <= 2100 &&
+    d.year === END_YEAR &&
     Number.isFinite(getMonthNumber(d)) &&
     Number.isFinite(getMonthlyHotDaysValue(d))
   );
@@ -2949,34 +3024,11 @@ function getMonthlyHotDayDistributionForTranslation(totalBlocks) {
     };
   }
 
-  const monthlyYearMeans = Array.from(
-    d3.rollup(
-      monthlyRows,
-      (v) => ({
-        year: v[0].year,
-        month: getMonthNumber(v[0]),
-        value: d3.mean(v, (d) => getMonthlyHotDaysValue(d)),
-      }),
-      (d) => getMonthNumber(d),
-      (d) => d.year
-    ),
-    ([month, yearMap]) => ({
-      month,
-      values: Array.from(yearMap.values()).sort((a, b) => d3.ascending(a.year, b.year)),
-    })
-  );
-
   const monthValues = d3.range(1, 13).map((month) => {
-    const monthSeries = monthlyYearMeans.find((d) => d.month === month)?.values || [];
-    const rolling = addCenteredRollingAverage(
-      monthSeries.map((d) => ({ year: d.year, value: Math.max(0, d.value) })),
-      "value",
-      5
-    );
-    const endpoint = rolling.find((d) => d.year === 2100);
+    const rows = monthlyRows.filter((d) => getMonthNumber(d) === month);
     return {
       month,
-      value: Math.max(0, endpoint?.value || 0),
+      value: Math.max(0, d3.mean(rows, (d) => getMonthlyHotDaysValue(d)) || 0),
     };
   });
 
@@ -3016,7 +3068,7 @@ function getTranslationStats() {
 
   const hotRows = stateData.filter((d) =>
     d.scenario === "ssp585" &&
-    d.year >= 2020 && d.year <= 2100 &&
+    d.year >= START_YEAR && d.year <= END_YEAR &&
     Number.isFinite(getAlignedHotDaysValue(d))
   );
 
@@ -3027,19 +3079,14 @@ function getTranslationStats() {
       hotRows,
       (v) => ({
         year: v[0].year,
-        hotDaysChangeRaw: d3.mean(v, (d) => getAlignedHotDaysValue(d)),
+        value: d3.mean(v, (d) => getAlignedHotDaysValue(d)),
+        rollingWindow: d3.max(v, (d) => getHotDayRollingInfo(d)?.rollingWindow || 1),
       }),
       (d) => d.year
     ).values()
   ).sort((a, b) => d3.ascending(a.year, b.year));
 
-  const hotRolling = addCenteredRollingAverage(
-    hotByYear.map((d) => ({ year: d.year, value: d.hotDaysChangeRaw })),
-    "value",
-    5
-  );
-
-  const hot2100 = hotRolling.find((d) => d.year === 2100);
+  const hot2100 = hotByYear.find((d) => d.year === END_YEAR);
 
   if (!hot2100) return null;
 
@@ -3145,25 +3192,18 @@ function getHighEmissionStateHotdayChangeSeries() {
         values,
         (v) => ({
           year: v[0].year,
-          value: d3.mean(v, (d) => getAlignedHotDaysValue(d)),
+          days: Math.max(0, d3.mean(v, (d) => getAlignedHotDaysValue(d)) || 0),
+          rawRollingDays: Math.max(0, d3.mean(v, (d) => getHotDayRollingInfo(d)?.rawRolling ?? NaN) || 0),
+          rollingWindow: d3.max(v, (d) => getHotDayRollingInfo(d)?.rollingWindow || 1),
         }),
         (d) => d.year
       ).values()
     ).sort((a, b) => d3.ascending(a.year, b.year));
 
-    const rolling = addCenteredRollingAverage(yearly, "value", 5)
-      .map((d) => ({
-        year: d.year,
-        days: Math.max(0, d.value),
-        rawDays: Math.max(0, d.rawValue),
-        rollingWindow: d.rollingWindow,
-      }))
-      .filter((d) => Number.isFinite(d.days));
-
     return {
       stateName,
       scenario: "ssp585",
-      series: rolling,
+      series: yearly.filter((d) => Number.isFinite(d.days)),
     };
   }).filter((d) => d.series.length);
 
@@ -3371,7 +3411,7 @@ function renderStateHotdaySmallMultiples() {
     .attr("fill", "#c4512c")
     .attr("font-size", 34)
     .attr("font-weight", 950)
-    .text("+0 days");
+    .text("+0.0 days");
 
   panel.append("text")
     .attr("x", (d) => d.w / 2)
@@ -3379,7 +3419,7 @@ function renderStateHotdaySmallMultiples() {
     .attr("text-anchor", "middle")
     .attr("fill", "#5f6b73")
     .attr("font-size", 11.5)
-    .text("added summer 35°C+ days");
+    .text("5-year avg. added summer 35°C+ days");
 
   if (positionedLeftPanels.length && positionedRightPanels.length) {
     const dividerX = rightX - 42;
@@ -3426,7 +3466,7 @@ function renderStateHotdaySmallMultiples() {
     .attr("text-anchor", "end")
     .attr("fill", "#5f6b73")
     .attr("font-size", 11)
-    .text(`${d3.format(".0f")(maxValue)} days`);
+    .text(`${d3.format(".1f")(maxValue)} days`);
 
   legend.append("text")
     .attr("x", legendW / 2)
@@ -3435,7 +3475,7 @@ function renderStateHotdaySmallMultiples() {
     .attr("fill", "#7a858d")
     .attr("font-size", 11)
     .attr("font-weight", 800)
-    .text("Avg. increase in summer 35°C+ days");
+    .text("5-year avg. increase in summer 35°C+ days");
 
   function updateYear(year, immediate = false) {
     const duration = immediate ? 0 : 520;
@@ -3454,7 +3494,7 @@ function renderStateHotdaySmallMultiples() {
           const current = Number(String(this.textContent).replace(/[^0-9.\-]/g, "")) || 0;
           const interp = d3.interpolateNumber(current, days);
           return function(t) {
-            this.textContent = `${d3.format("+.0f")(interp(t))} days`;
+            this.textContent = `${d3.format("+.1f")(interp(t))} days`;
           };
         });
     });
@@ -3477,7 +3517,7 @@ function renderStateHotdaySmallMultiples() {
   legendContainer
     .append("div")
     .attr("class", "legend-caption")
-    .text("Color shows average added summer 35°C+ days. Left: earlier warming states; right: largest hot-day increase.");
+    .text("Color shows 5-year average added summer 35°C+ days. Left: earlier warming states; right: largest hot-day increase.");
 }
 
 function renderThresholdExplanation() {
@@ -3538,42 +3578,42 @@ function renderThresholdExplanation() {
 
   g.append("text")
     .attr("x", 54)
-    .attr("y", 54)
+    .attr("y", 24)
     .attr("fill", "#5f6b73")
-    .attr("font-size", 12)
+    .attr("font-size", 11)
     .attr("font-weight", 900)
     .attr("letter-spacing", "0.08em")
     .text("WHY EXTREME DAYS GROW DIFFERENTLY");
 
   g.append("text")
     .attr("x", 54)
-    .attr("y", 88)
+    .attr("y", 52)
     .attr("fill", "#17202a")
-    .attr("font-size", 25)
+    .attr("font-size", 23)
     .attr("font-weight", 950)
     .text("Extreme heat risk depends on where a state starts.");
 
   const intro = g.append("text")
     .attr("x", 54)
-    .attr("y", 118)
+    .attr("y", 82)
     .attr("fill", "#5f6b73")
-    .attr("font-size", 13);
+    .attr("font-size", 12.5);
 
   intro.append("tspan")
     .attr("x", 54)
-    .text("Average warming pushes states upward, but summer 35°C+ days grow fastest when that push crosses a fixed threshold.");
+    .text("Starting heat + warming shift determines how many days cross the fixed 35°C line.");
   intro.append("tspan")
     .attr("x", 54)
-    .attr("dy", 18)
-    .text("This diagram explains the mismatch from Plot 03: starting heat + warming shift → more days over 35°C.");
+    .attr("dy", 17)
+    .text("This explains why Plot 03’s fastest-warming state may differ from the state adding the most summer 35°C+ days.");
 
   const panelCount = panels.length;
-  const panelW = panelCount === 1 ? 330 : panelCount === 2 ? 290 : 250;
-  const gap = panelCount === 1 ? 0 : panelCount === 2 ? 72 : 42;
+  const panelW = panelCount === 1 ? 330 : panelCount === 2 ? 280 : 220;
+  const gap = panelCount === 1 ? 0 : panelCount === 2 ? 86 : 56;
   const startX = (width - panelCount * panelW - (panelCount - 1) * gap) / 2;
-  const topY = 178;
-  const ladderH = 235;
-  const thresholdY = topY + 76;
+  const topY = 225;
+  const ladderH = 205;
+  const thresholdY = topY + 70;
   const baseYMax = topY + ladderH - 34;
   const baseYMin = thresholdY + 22;
 
@@ -3601,10 +3641,11 @@ function renderThresholdExplanation() {
     .attr("opacity", 0.82);
 
   g.append("text")
-    .attr("x", startX - 10)
+    .attr("x", startX + panelCount * panelW + (panelCount - 1) * gap + 18)
     .attr("y", thresholdY - 10)
+    .attr("text-anchor", "end")
     .attr("fill", "#8f2f1b")
-    .attr("font-size", 12)
+    .attr("font-size", 11.5)
     .attr("font-weight", 900)
     .text("35°C threshold");
 
@@ -3624,25 +3665,25 @@ function renderThresholdExplanation() {
 
     group.append("text")
       .attr("x", cx)
-      .attr("y", topY - 34)
+      .attr("y", topY - 104)
       .attr("text-anchor", "middle")
       .attr("fill", "#17202a")
-      .attr("font-size", panelCount === 3 ? 19 : 21)
+      .attr("font-size", panelCount === 3 ? 17 : 20)
       .attr("font-weight", 950)
       .text(d.stateName);
 
     wrapSvgText(
       group.append("text")
         .attr("x", cx)
-        .attr("y", topY - 12)
+        .attr("y", topY - 82)
         .attr("text-anchor", "middle")
         .attr("fill", d.kind?.includes("top-hotday") ? "#8f2f1b" : "#5f6b73")
         .attr("font-size", 10.5)
         .attr("font-weight", 850)
         .attr("letter-spacing", "0.04em"),
       d.label.toUpperCase(),
-      panelW - 30,
-      13
+      panelW - 24,
+      12
     );
 
     // subtle vertical guide
@@ -3662,14 +3703,6 @@ function renderThresholdExplanation() {
       .attr("fill", "#7a858d")
       .attr("stroke", "rgba(255,255,255,0.8)")
       .attr("stroke-width", 2);
-
-    group.append("text")
-      .attr("x", cx + 16)
-      .attr("y", baseY + 4)
-      .attr("fill", "#5f6b73")
-      .attr("font-size", 11)
-      .attr("font-weight", 800)
-      .text("starting heat");
 
     const arrow = group.append("line")
       .attr("x1", cx)
@@ -3717,21 +3750,21 @@ function renderThresholdExplanation() {
 
     group.append("text")
       .attr("x", cx)
-      .attr("y", baseYMax + 50)
+      .attr("y", baseYMax + 42)
       .attr("text-anchor", "middle")
       .attr("fill", "#17202a")
       .attr("font-size", 22)
       .attr("font-weight", 950)
-      .text(`${d3.format("+.0f")(d.finalDays)} days`);
+      .text(`${d3.format("+.1f")(d.finalDays)} days`);
 
     group.append("text")
       .attr("x", cx)
-      .attr("y", baseYMax + 72)
+      .attr("y", baseYMax + 61)
       .attr("text-anchor", "middle")
       .attr("fill", "#5f6b73")
       .attr("font-size", 11.5)
       .attr("font-weight", 750)
-      .text("added summer 35°C+ days by 2100");
+      .text("5-year avg. added summer 35°C+ days");
   });
 
   const defs = svg.append("defs");
@@ -3759,7 +3792,7 @@ function renderThresholdExplanation() {
     .attr("fill", "#17202a")
     .attr("font-size", 15)
     .attr("font-weight", 900)
-    .text("Therefore, we track summer 35°C+ days directly instead of relying only on average temperature.")
+    .text("Therefore, the next views track summer 35°C+ days directly, not only average temperature.")
     .attr("opacity", 0)
     .transition()
     .delay(980)
@@ -3769,7 +3802,7 @@ function renderThresholdExplanation() {
   legendContainer
     .append("div")
     .attr("class", "legend-caption")
-    .text("Conceptual ladder: grey dot = starting heat, arrow = warming push, filled height = crossing the 35°C threshold. Values use baseline-aligned summer 35°C+ day changes.");
+    .text("Conceptual ladder: grey dot = starting heat, arrow = warming push, red fill = crossing 35°C. Values use baseline-aligned summer 35°C+ day changes.");
 }
 
 function wrapSvgText(textSelection, text, maxWidth, lineHeight = 14) {
@@ -3803,7 +3836,89 @@ function wrapSvgText(textSelection, text, maxWidth, lineHeight = 14) {
   });
 }
 
+
+function renderRiskTransition() {
+  hideTrendSummary();
+  hideMapYearOverlay();
+  setVizMode("risk-transition");
+  svg.selectAll("*").remove();
+  legendContainer.html("");
+
+  const g = svg.append("g")
+    .attr("class", "risk-transition-viz")
+    .attr("transform", `translate(${width / 2},${height / 2 - 20})`);
+
+  g.append("text")
+    .attr("x", 0)
+    .attr("y", -82)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#8f2f1b")
+    .attr("font-size", 12)
+    .attr("font-weight", 900)
+    .attr("letter-spacing", "0.10em")
+    .text("THEREFORE");
+
+  g.append("text")
+    .attr("x", 0)
+    .attr("y", -34)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#17202a")
+    .attr("font-size", 36)
+    .attr("font-weight", 950)
+    .attr("letter-spacing", "-0.045em")
+    .text("Track summer 35°C+ days directly.");
+
+  const lines = [
+    "Average temperature explains the background warming.",
+    "Summer 35°C+ days show when that warming becomes daily exposure."
+  ];
+
+  g.selectAll("text.risk-transition-line")
+    .data(lines)
+    .join("text")
+    .attr("class", "risk-transition-line")
+    .attr("x", 0)
+    .attr("y", (_, i) => 12 + i * 30)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#5f6b73")
+    .attr("font-size", 18)
+    .attr("font-weight", 650)
+    .text((d) => d);
+
+  const chips = ["direct metric", "state pattern", "2100 risk"];
+  const chipG = g.selectAll("g.risk-chip")
+    .data(chips)
+    .join("g")
+    .attr("class", "risk-chip")
+    .attr("transform", (_, i) => `translate(${(i - 1) * 170},94)`);
+
+  chipG.append("rect")
+    .attr("x", -70)
+    .attr("y", -18)
+    .attr("width", 140)
+    .attr("height", 36)
+    .attr("rx", 18)
+    .attr("fill", "rgba(255, 245, 235, 0.70)")
+    .attr("stroke", "rgba(196, 81, 44, 0.20)");
+
+  chipG.append("text")
+    .attr("x", 0)
+    .attr("y", 5)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#8f2f1b")
+    .attr("font-size", 12)
+    .attr("font-weight", 900)
+    .attr("letter-spacing", "0.04em")
+    .text((d) => d.toUpperCase());
+
+  legendContainer
+    .append("div")
+    .attr("class", "legend-caption")
+    .text("Next: a static 2100 map of baseline-aligned 5-year average added summer 35°C+ days.");
+}
+
 function renderCompareLineChart() {
+  const chartCycleId = renderCycleId;
   hideTrendSummary(); 
   hideMapYearOverlay();
   setVizMode("compare-line");
@@ -3913,7 +4028,7 @@ function renderCompareLineChart() {
         .on("end", () => {
           pathsAnimating -= 1;
           if (pathsAnimating === 0) {
-            setTimeout(() => showCompareSummary(grouped), 300);
+            setTimeout(() => showCompareSummary(grouped, chartCycleId), 300);
           }
         });
 
@@ -4497,7 +4612,7 @@ function renderMonthlyChart(stateName) {
     .call(
       d3.axisLeft(y)
         .ticks(4)
-        .tickFormat((d) => `${d}`)
+        .tickFormat((d) => d3.format(".1f")(d))
     );
 
   g.append("text")
@@ -4506,7 +4621,7 @@ function renderMonthlyChart(stateName) {
     .attr("fill", "#5f6b73")
     .attr("font-size", 12)
     .attr("font-weight", 800)
-    .text(`${stateName}: monthly 35°C+ day delta in ${currentState.year}`);
+    .text(`${stateName}: monthly 5-year avg. 35°C+ day change in ${currentState.year}`);
 
   g.append("text")
     .attr("x", innerWidth)
@@ -4564,7 +4679,7 @@ function renderMonthlyChart(stateName) {
     .attr("fill", "#5f6b73")
     .attr("font-size", 10)
     .attr("font-weight", 800)
-    .text((d) => d3.format(".0f")(d.hotDays));
+    .text((d) => d3.format(".1f")(d.hotDays));
 }
 
 function getColorScale(metric, values) {
@@ -4703,11 +4818,11 @@ function showTooltip(event, stateName, row, metric) {
   if (metric === "summer_tas_c_change_from_observed_2020") {
     tooltipRows = `
       <p>Average warming delta: <strong>${formatValue(avgWarming, "°C")}</strong></p>
-      <p>35°C+ days delta: <strong>${formatValue(hotDaysChange, "days")}</strong></p>
+      <p>5-year avg. 35°C+ days delta: <strong>${formatValue(hotDaysChange, "days")}</strong></p>
     `;
   } else if (metric === "summer_hot_days_35c_change_from_observed_2020") {
     tooltipRows = `
-      <p>35°C+ days delta: <strong>${formatValue(hotDaysChange, "days")}</strong></p>
+      <p>5-year avg. 35°C+ days delta: <strong>${formatValue(hotDaysChange, "days")}</strong></p>
       <p>Average warming delta: <strong>${formatValue(avgWarming, "°C")}</strong></p>
     `;
   }
@@ -4797,7 +4912,7 @@ function updateSelectedStateCard(stateName, row) {
   selectedStateTitle.text(stateName);
 
   selectedStateSummary.text(
-    `By ${currentState.year} under ${scenarioLabels[currentState.scenario].toLowerCase()}, ${stateName} is projected to have ${formatValue(hotDaysChange, "days")} baseline-aligned additional days with daily highs above 35°C.`
+    `By ${currentState.year} under ${scenarioLabels[currentState.scenario].toLowerCase()}, ${stateName} is projected to have ${formatValue(hotDaysChange, "days")} baseline-aligned 5-year average additional summer days with daily highs above 35°C.`
   );
 
   selectedStateWarming.text(formatValue(avgWarming, "°C"));
@@ -4807,7 +4922,7 @@ function updateSelectedStateCard(stateName, row) {
   if (!snapshotStateTitle.empty()) {
     snapshotStateTitle.text(stateName);
     snapshotStateText.text(
-      `${stateName} connects the national pattern to a local question: how much the number of 35°C+ summer days changes after 2020 baseline alignment?`
+      `${stateName} connects the national pattern to a local question: how much the 5-year average number of 35°C+ summer days changes after 2020 baseline alignment?`
     );
     snapshotScenario.text(scenarioLabels[currentState.scenario]);
     snapshotYear.text(currentState.year);
@@ -4836,22 +4951,72 @@ function getRawHotDaysValue(d) {
     : NaN;
 }
 
-function ensureHotDayAlignmentBaselines() {
-  if (hotDayAlignmentBaselineCache) return hotDayAlignmentBaselineCache;
+function ensureHotDayRollingLookup() {
+  if (hotDayRollingLookupCache) return hotDayRollingLookupCache;
 
-  hotDayAlignmentBaselineCache = new Map();
-  const baselineRows = stateData.filter((d) =>
-    d.year === START_YEAR &&
+  hotDayRollingLookupCache = new Map();
+
+  const rows = stateData.filter((d) =>
+    d.year >= START_YEAR && d.year <= END_YEAR &&
     scenarioOrder.includes(d.scenario) &&
     d.state &&
     Number.isFinite(getRawHotDaysValue(d))
   );
 
-  baselineRows.forEach((d) => {
-    const key = `${normalizeStateName(d.state)}|${d.scenario}`;
-    hotDayAlignmentBaselineCache.set(key, getRawHotDaysValue(d));
+  const byStateScenario = d3.group(
+    rows,
+    (d) => normalizeStateName(d.state),
+    (d) => d.scenario
+  );
+
+  byStateScenario.forEach((scenarioMap, stateName) => {
+    scenarioMap.forEach((values, scenario) => {
+      const yearly = Array.from(
+        d3.rollup(
+          values,
+          (v) => ({
+            year: v[0].year,
+            value: d3.mean(v, (d) => getRawHotDaysValue(d)),
+          }),
+          (d) => d.year
+        ).values()
+      ).sort((a, b) => d3.ascending(a.year, b.year));
+
+      const rolling = addCenteredRollingAverage(yearly, "value", 5);
+      const baseline = rolling.find((d) => d.year === START_YEAR)?.value;
+      if (!Number.isFinite(baseline)) return;
+
+      rolling.forEach((d) => {
+        hotDayRollingLookupCache.set(`${stateName}|${scenario}|${d.year}`, {
+          value: d.value - baseline,
+          rawRolling: d.value,
+          baseline,
+          rawValue: d.rawValue,
+          rollingWindow: d.rollingWindow,
+        });
+      });
+    });
   });
 
+  return hotDayRollingLookupCache;
+}
+
+function getHotDayRollingInfo(d) {
+  if (!d || !d.state || !scenarioOrder.includes(d.scenario)) return null;
+  const lookup = ensureHotDayRollingLookup();
+  return lookup.get(`${normalizeStateName(d.state)}|${d.scenario}|${d.year}`) || null;
+}
+
+function ensureHotDayAlignmentBaselines() {
+  // Backward-compatible helper: the current story uses rolling 2020 baselines.
+  if (hotDayAlignmentBaselineCache) return hotDayAlignmentBaselineCache;
+  hotDayAlignmentBaselineCache = new Map();
+  ensureHotDayRollingLookup().forEach((info, key) => {
+    const [state, scenario, year] = key.split("|");
+    if (+year === START_YEAR) {
+      hotDayAlignmentBaselineCache.set(`${state}|${scenario}`, info.rawRolling);
+    }
+  });
   return hotDayAlignmentBaselineCache;
 }
 
@@ -4865,8 +5030,9 @@ function getAlignedHotDaysValue(d) {
   if (!Number.isFinite(raw)) return NaN;
   if (!scenarioOrder.includes(d.scenario)) return raw;
 
-  // Same baseline-alignment logic as Plot 01: show the source offset at 2020,
-  // then compare future change after subtracting the model's 2020 offset.
+  const rollingInfo = getHotDayRollingInfo(d);
+  if (rollingInfo && Number.isFinite(rollingInfo.value)) return rollingInfo.value;
+
   return raw - getHotDayAlignmentBaseline(d);
 }
 
@@ -4894,23 +5060,69 @@ function getRawMonthlyHotDaysValue(d) {
   return NaN;
 }
 
+function ensureMonthlyHotDayRollingLookup() {
+  if (monthlyHotDayRollingLookupCache) return monthlyHotDayRollingLookupCache;
+
+  monthlyHotDayRollingLookupCache = new Map();
+
+  const rows = monthlyData.filter((d) =>
+    d.year >= START_YEAR && d.year <= END_YEAR &&
+    scenarioOrder.includes(d.scenario) &&
+    d.state &&
+    Number.isFinite(getMonthNumber(d)) &&
+    Number.isFinite(getRawMonthlyHotDaysValue(d))
+  );
+
+  const grouped = d3.group(
+    rows,
+    (d) => normalizeStateName(d.state),
+    (d) => d.scenario,
+    (d) => getMonthNumber(d)
+  );
+
+  grouped.forEach((scenarioMap, stateName) => {
+    scenarioMap.forEach((monthMap, scenario) => {
+      monthMap.forEach((values, month) => {
+        const yearly = Array.from(
+          d3.rollup(
+            values,
+            (v) => ({
+              year: v[0].year,
+              value: d3.mean(v, (d) => getRawMonthlyHotDaysValue(d)),
+            }),
+            (d) => d.year
+          ).values()
+        ).sort((a, b) => d3.ascending(a.year, b.year));
+
+        const rolling = addCenteredRollingAverage(yearly, "value", 5);
+        const baseline = rolling.find((d) => d.year === START_YEAR)?.value;
+        if (!Number.isFinite(baseline)) return;
+
+        rolling.forEach((d) => {
+          monthlyHotDayRollingLookupCache.set(`${stateName}|${scenario}|${month}|${d.year}`, {
+            value: d.value - baseline,
+            rawRolling: d.value,
+            baseline,
+            rawValue: d.rawValue,
+            rollingWindow: d.rollingWindow,
+          });
+        });
+      });
+    });
+  });
+
+  return monthlyHotDayRollingLookupCache;
+}
+
 function ensureMonthlyHotDayAlignmentBaselines() {
   if (monthlyHotDayAlignmentBaselineCache) return monthlyHotDayAlignmentBaselineCache;
-
   monthlyHotDayAlignmentBaselineCache = new Map();
-  monthlyData
-    .filter((d) =>
-      d.year === START_YEAR &&
-      scenarioOrder.includes(d.scenario) &&
-      d.state &&
-      Number.isFinite(getMonthNumber(d)) &&
-      Number.isFinite(getRawMonthlyHotDaysValue(d))
-    )
-    .forEach((d) => {
-      const key = `${normalizeStateName(d.state)}|${d.scenario}|${getMonthNumber(d)}`;
-      monthlyHotDayAlignmentBaselineCache.set(key, getRawMonthlyHotDaysValue(d));
-    });
-
+  ensureMonthlyHotDayRollingLookup().forEach((info, key) => {
+    const [state, scenario, month, year] = key.split("|");
+    if (+year === START_YEAR) {
+      monthlyHotDayAlignmentBaselineCache.set(`${state}|${scenario}|${month}`, info.rawRolling);
+    }
+  });
   return monthlyHotDayAlignmentBaselineCache;
 }
 
@@ -4919,9 +5131,14 @@ function getAlignedMonthlyHotDaysValue(d) {
   if (!Number.isFinite(raw)) return NaN;
   if (!scenarioOrder.includes(d.scenario)) return raw;
 
+  const lookup = ensureMonthlyHotDayRollingLookup();
+  const key = `${normalizeStateName(d.state)}|${d.scenario}|${getMonthNumber(d)}|${d.year}`;
+  const rollingInfo = lookup.get(key);
+  if (rollingInfo && Number.isFinite(rollingInfo.value)) return rollingInfo.value;
+
   const baselines = ensureMonthlyHotDayAlignmentBaselines();
-  const key = `${normalizeStateName(d.state)}|${d.scenario}|${getMonthNumber(d)}`;
-  return raw - (baselines.get(key) ?? 0);
+  const fallbackKey = `${normalizeStateName(d.state)}|${d.scenario}|${getMonthNumber(d)}`;
+  return raw - (baselines.get(fallbackKey) ?? 0);
 }
 
 function getMonthlyHotDaysValue(d) {

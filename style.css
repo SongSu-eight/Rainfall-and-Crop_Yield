@@ -1257,12 +1257,24 @@ body.intro-locked {
   z-index: 30;
   display: none;
   max-height: 15.5rem;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 0.35rem;
   border: 1px solid rgba(23, 32, 42, 0.14);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 18px 34px rgba(40, 55, 70, 0.16);
+}
+
+.state-suggestions::-webkit-scrollbar {
+  width: 8px;
+}
+
+.state-suggestions::-webkit-scrollbar-thumb {
+  background: rgba(143, 47, 27, 0.28);
+  border-radius: 999px;
 }
 
 .state-suggestions.is-open {

@@ -396,15 +396,6 @@ function setupIntroExpectation() {
     ].filter(isSelectableStateName))
   ).sort(d3.ascending);
 
-  return candidates.filter((stateName) => {
-    const projections = getStateAlignedEndCenturyProjections(stateName);
-    return projections && projections.length > 0;
-  });
-}
-
-function setupIntroExpectation() {
-  knownStateNames = getIntroEligibleStateNames();
-
   if (hometownStateInput.empty() || expectationTempInput.empty()) return;
 
   renderStateSuggestions("");
@@ -413,6 +404,12 @@ function setupIntroExpectation() {
     hometownStateInput.classed("is-invalid", false);
     expectationTempInput.classed("is-invalid", false);
     updateIntroPrompt();
+
+    const hasState = hometownStateInput.property("value").trim();
+    const hasExpectation = expectationTempInput.property("value").trim();
+    if (hasState && hasExpectation) {
+      trySubmitIntroExpectation();
+    }
   };
 
   hometownStateInput.on("input", () => {
@@ -450,9 +447,7 @@ function setupIntroExpectation() {
 
 function renderStateSuggestions(query) {
   if (stateSuggestions.empty()) return;
-
   const cleaned = normalizeStateName(query || "").toLowerCase();
-
   const matches = knownStateNames
     .filter((name) => !cleaned || name.toLowerCase().includes(cleaned));
 
@@ -489,15 +484,6 @@ function trySubmitIntroExpectation() {
 }
 
 function setupScrollGate() {
-  const isInsideStateSuggestions = (target) => {
-    const suggestionsNode = document.querySelector("#state-suggestions");
-    return (
-      suggestionsNode &&
-      suggestionsNode.classList.contains("is-open") &&
-      suggestionsNode.contains(target)
-    );
-  };
-
   const blockScroll = (event) => {
     if (introCompleted) return;
 
@@ -509,21 +495,14 @@ function setupScrollGate() {
 
     const heroBottom = document.querySelector("#hero")?.getBoundingClientRect().bottom ?? 0;
     if (heroBottom <= 6) return;
-
     event.preventDefault();
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   window.addEventListener("wheel", blockScroll, { passive: false });
   window.addEventListener("touchmove", blockScroll, { passive: false });
-
   window.addEventListener("keydown", (event) => {
     if (introCompleted) return;
-
-    if (isInsideStateSuggestions(event.target)) {
-      return;
-    }
-
     const keys = ["ArrowDown", "PageDown", " ", "Spacebar", "End"];
     if (keys.includes(event.key)) {
       event.preventDefault();
@@ -862,7 +841,7 @@ function renderStateChangeFollowup(result) {
   stateChangeResultSection.attr("hidden", null);
   stateChangeTitle.text(titleText);
   stateChangeText.text(bodyText);
-  stateChangeNote.text("High-emissions pathway · baseline-aligned 5-year rolling annual average");
+  stateChangeNote.text("High-emissions pathway · baseline-aligned 5-year rolling annual average · color shows °C change since 2020");
 
   const cards = selectedIsTop
     ? [{ role: "Your state + largest increase", kind: "selected top", ...selected }]
@@ -1020,20 +999,10 @@ function stateChangeSliderKeydown(event) {
 }
 
 function renderStateShapeCards(cards) {
-  const allChanges = cards.flatMap((d) =>
-    d.series
-      .map((row) => row.change)
-      .filter((value) => Number.isFinite(value))
-  );
-
-  const maxAbsChange = Math.max(
-    0.1,
-    d3.max(allChanges, (value) => Math.abs(value)) || 1
-  );
-
-  const color = d3.scaleDiverging()
-    .domain([-maxAbsChange, 0, maxAbsChange])
-    .interpolator((t) => d3.interpolateRdBu(1 - t));
+  const maxChange = d3.max(cards.flatMap((d) => d.series.map((row) => row.change))) || 1;
+  const color = d3.scaleSequential()
+    .domain([0, Math.max(0.1, maxChange)])
+    .interpolator(d3.interpolateOrRd);
 
   const cardsWrap = stateChangeBlocks
     .append("div")
@@ -1047,7 +1016,6 @@ function renderStateShapeCards(cards) {
 
   card.html((d) => {
     const final = d.series.find((row) => row.year === END_YEAR) || d.series[d.series.length - 1];
-
     return `
       <div class="state-change-card-header">
         <div>
@@ -1056,16 +1024,13 @@ function renderStateShapeCards(cards) {
         </div>
         <div class="state-change-year-pill" data-role="year">2020</div>
       </div>
-
       <div class="state-shape-stage">
         <svg class="state-shape-svg" viewBox="0 0 320 190" role="img" aria-label="${d.stateName} map shape"></svg>
       </div>
-
       <div class="state-change-value-row">
         <strong data-role="value">+0.0</strong>
         <small>°C since 2020</small>
       </div>
-
       <p class="state-change-state-note">By 2100: ${d3.format("+.1f")(final.change)}°C baseline-aligned change from 2020.</p>
     `;
   });
@@ -1098,12 +1063,12 @@ function renderStateShapeCards(cards) {
       .attr("class", "state-shape-path")
       .attr("d", path)
       .attr("transform", `translate(${tx},${ty}) scale(${scale})`)
-      .attr("fill", color(0))
+      .attr("fill", "#f3f0ed")
       .attr("stroke", "rgba(23,32,42,0.28)")
       .attr("stroke-width", 1 / scale);
   });
 
-  stateChangeBlocks.datum({ color, maxAbsChange });
+  stateChangeBlocks.datum({ color });
 }
 
 function startStateChangeLoop(cards, years) {
@@ -1238,32 +1203,18 @@ function toggleStateChangePlayback() {
 
 function updateStateChangeMapCards(cards, year) {
   const meta = stateChangeBlocks.datum() || {};
-
-  const allChanges = cards.flatMap((d) =>
-    d.series
-      .map((row) => row.change)
-      .filter((value) => Number.isFinite(value))
-  );
-
-  const maxAbsChange = meta.maxAbsChange || Math.max(
-    0.1,
-    d3.max(allChanges, (value) => Math.abs(value)) || 1
-  );
-
-  const color = meta.color || d3.scaleDiverging()
-    .domain([-maxAbsChange, 0, maxAbsChange])
-    .interpolator((t) => d3.interpolateRdBu(1 - t));
+  const allMax = d3.max(cards.flatMap((d) => d.series.map((row) => row.change))) || 1;
+  const color = meta.color || d3.scaleSequential().domain([0, Math.max(0.1, allMax)]).interpolator(d3.interpolateOrRd);
 
   stateChangeBlocks
     .selectAll("div.state-change-state-card")
     .each(function(d) {
       const card = d3.select(this);
       const row = getNearestYearRow(d.series, year);
-      const change = Number.isFinite(row?.change) ? row.change : 0;
+      const change = Math.max(0, row.change || 0);
 
       card.select('[data-role="year"]').text(row.year);
       card.select('[data-role="value"]').text(d3.format("+.1f")(change));
-
       card.select("path.state-shape-path")
         .transition()
         .duration(260)
@@ -6464,46 +6415,6 @@ function renderExposureContrast() {
 }
 
 // step8impact
-
-function renderImpactSourceCards() {
-  const step = document.querySelector('.step[data-step="7"]');
-  if (!step || step.classList.contains('step--impact-sources-ready')) return;
-
-  step.classList.add('step--impact-sources', 'step--impact-sources-ready');
-  step.innerHTML = `
-    <p class="step-number">08 · Impact</p>
-    <h2>Sources behind these impacts</h2>
-    <p class="impact-source-intro">Click a source card to open the study or report behind each daily-life example.</p>
-    <div class="impact-source-links" aria-label="Impact source links">
-      <a class="impact-source-card source-oneearth" href="https://www.cell.com/one-earth/fulltext/S2590-3322%2822%2900209-3" target="_blank" rel="noopener noreferrer">
-        <span>01 · Sleep</span>
-        <strong>Heat and sleep</strong>
-        <small>One Earth · Minor et al. (2022)</small>
-      </a>
-      <a class="impact-source-card source-aea" href="https://www.aeaweb.org/articles?id=10.1257%2Fpol.20180612" target="_blank" rel="noopener noreferrer">
-        <span>02 · Learning</span>
-        <strong>Heat and learning</strong>
-        <small>American Economic Association · Park et al. (2020)</small>
-      </a>
-      <a class="impact-source-card source-eia" href="https://www.eia.gov/todayinenergy/detail.php?id=62303" target="_blank" rel="noopener noreferrer">
-        <span>03 · Cooling cost</span>
-        <strong>Heat and cooling cost</strong>
-        <small>U.S. Energy Information Administration</small>
-      </a>
-      <a class="impact-source-card source-ucsd" href="https://today.ucsd.edu/story/weathering-change-fewer-cold-fatalities-more-heat-emergencies-in-california" target="_blank" rel="noopener noreferrer">
-        <span>04 · Health</span>
-        <strong>Heat and health emergencies</strong>
-        <small>UC San Diego Today</small>
-      </a>
-      <a class="impact-source-card source-who" href="https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health" target="_blank" rel="noopener noreferrer">
-        <span>Extra context</span>
-        <strong>Climate change, heat and health</strong>
-        <small>World Health Organization</small>
-      </a>
-    </div>
-  `;
-}
-
 function renderImpactPlaceholder() {
   hideMapYearOverlay();
 
@@ -6519,8 +6430,8 @@ function renderImpactPlaceholder() {
   svg.selectAll("*").remove();
   legendContainer.html("");
 
-  title.text("What pressure can extra summer 35°C+ days create?");
-  subtitle.text("Population exposure-days are a computed proxy; the other cards add context rather than direct outcome predictions.");
+  title.text("What changes during the extreme hot days?");
+  subtitle.text("Daily-life examples from outside sources, paired with our exposure framing.");
 
   svg.style("display", "none");
 
@@ -6528,76 +6439,107 @@ function renderImpactPlaceholder() {
   chartWrap.selectAll(".impact-fill").remove();
 
   const container = chartWrap.append("div")
-    .attr("class", "impact-fill impact-fill--clean")
+    .attr("class", "impact-fill impact-fill--combined")
     .style("opacity", 0);
 
+  const impacts = [
+    {
+      num: "01",
+      label: "SLEEP",
+      stat: "−14.08",
+      unit: "mins / warm night",
+      desc: "On very warm nights above 30°C, sleep declines by about 14 minutes. More frequent hot nights can make people fall asleep later and wake up earlier, compressing the sleep period and reducing sleep quality.",
+      cite: "Minor et al. (2022), Rising temperatures erode human sleep globally",
+      sourceLabel: "One Earth",
+      sourceTitle: "Heat and sleep",
+      sourceMeta: "One Earth · Minor et al. (2022)",
+      url: "https://www.cell.com/one-earth/fulltext/S2590-3322(22)00209-3"
+    },
+    {
+      num: "02",
+      label: "LEARNING",
+      stat: "−1%",
+      unit: "/ +0.56°C",
+      desc: "Without air conditioning, a 0.56°C hotter school year reduces that year's learning by about 1%. Hot school days also disproportionately affect minority students, accounting for roughly 5% of the racial achievement gap.",
+      cite: "Park et al. (2020), Heat and learning",
+      sourceLabel: "AEA",
+      sourceTitle: "Heat and learning",
+      sourceMeta: "American Economic Association · Park et al. (2020)",
+      url: "https://www.aeaweb.org/articles?id=10.1257/pol.20180612"
+    },
+    {
+      num: "03",
+      label: "COOLING COST",
+      stat: "+3%",
+      unit: "/ household",
+      desc: "EIA's 2024 forecast expected a 5% rise in cooling degree days to increase average U.S. household summer electricity use by about 3%.",
+      cite: "U.S. EIA (2024), Typical residential electricity bills",
+      sourceLabel: "EIA",
+      sourceTitle: "Heat and cooling cost",
+      sourceMeta: "U.S. Energy Information Administration",
+      url: "https://www.eia.gov/todayinenergy/detail.php?id=62524"
+    },
+    {
+      num: "04",
+      label: "HEALTH",
+      stat: "+1.5M",
+      unit: "ER visits by 2050",
+      desc: "Hotter temperatures can increase emergency department visits for injuries, mental health issues, poisonings, and other heat-sensitive conditions, adding pressure to the healthcare system.",
+      cite: "Stanford / UCSD (2025), Weathering change; WHO, Heat and health",
+      sourceLabel: "UCSD Today",
+      sourceTitle: "Heat and health emergencies",
+      sourceMeta: "UC San Diego Today",
+      url: "https://today.ucsd.edu/story/weathering-change"
+    }
+  ];
+
   container.html(`
-    <div class="impact-clean-content">
-      <div class="impact-viz-rows impact-clean-rows">
-        <div class="impact-viz-row">
-          <div class="ivr-num">01</div>
-          <div class="ivr-body">
-            <div class="ivr-head">
-              <span class="ivr-label">POPULATION EXPOSURE</span>
-              <span class="ivr-stat">computed <span class="ivr-unit">proxy</span></span>
-            </div>
-            <p class="ivr-desc">We estimate exposure-days by multiplying baseline-aligned additional summer 35°C+ days by projected state population.</p>
-            <p class="ivr-cite">Computed proxy: added hot days × projected population.</p>
-          </div>
+    <div class="impact-combined">
+      <div class="impact-combined-head">
+        <div>
+          <p class="impact-combined-kicker">08 · Impact</p>
+          <h3>Daily-life impacts, with sources attached.</h3>
         </div>
-
-        <div class="impact-viz-row">
-          <div class="ivr-num">02</div>
-          <div class="ivr-body">
-            <div class="ivr-head">
-              <span class="ivr-label">OLDER ADULTS</span>
-              <span class="ivr-stat">context <span class="ivr-unit">proxy</span></span>
-            </div>
-            <p class="ivr-desc">Older adults can be more vulnerable during extreme heat, so current 65+ share helps interpret who may be exposed.</p>
-            <p class="ivr-cite">Proxy/context only: current 65+ share is not a 2100 age projection.</p>
-          </div>
-        </div>
-
-        <div class="impact-viz-row">
-          <div class="ivr-num">03</div>
-          <div class="ivr-body">
-            <div class="ivr-head">
-              <span class="ivr-label">COOLING DEMAND</span>
-              <span class="ivr-stat">pressure <span class="ivr-unit">proxy</span></span>
-            </div>
-            <p class="ivr-desc">More hot days can increase pressure on indoor cooling, especially where AC access and energy affordability are uneven.</p>
-            <p class="ivr-cite">Cooling degree days are a proxy for cooling pressure, not electricity cost.</p>
-          </div>
-        </div>
-
-        <div class="impact-viz-row">
-          <div class="ivr-num">04</div>
-          <div class="ivr-body">
-            <div class="ivr-head">
-              <span class="ivr-label">HUMIDITY + HOT-DRY</span>
-              <span class="ivr-stat">context <span class="ivr-unit">only</span></span>
-            </div>
-            <p class="ivr-desc">Humidity can make the same air temperature feel more stressful, while heat combined with dry conditions can matter for outdoor labor and crops.</p>
-            <p class="ivr-cite">Context only: this project does not directly project future heat index, drought severity, or crop yield.</p>
-          </div>
-        </div>
+        <p>These examples explain why extra 35°C+ days matter. They are outside-resource context, not direct predictions from our CMIP6 exposure proxy.</p>
       </div>
 
-      <div class="impact-viz-equity">
-        <span class="ive-tag">INTERPRETATION NOTE</span>
-        <p>These layers help interpret exposure. They do not predict illness, deaths, electricity bills, drought severity, or crop yield.</p>
+      <div class="impact-combined-grid">
+        ${impacts.map((d) => `
+          <article class="impact-combined-card">
+            <div class="impact-combined-num">${d.num}</div>
+            <div class="impact-combined-main">
+              <div class="impact-combined-rowhead">
+                <span>${d.label}</span>
+                <strong>${d.stat} <small>${d.unit}</small></strong>
+              </div>
+              <p class="impact-combined-desc">${d.desc}</p>
+              <p class="impact-combined-cite">${d.cite}</p>
+            </div>
+            <a class="impact-combined-source" href="${d.url}" target="_blank" rel="noopener noreferrer" aria-label="Open source: ${d.sourceTitle}">
+              <span>${d.num} · Source</span>
+              <strong>${d.sourceTitle}</strong>
+              <small>${d.sourceMeta}</small>
+              <em>${d.sourceLabel}</em>
+            </a>
+          </article>
+        `).join("")}
+      </div>
+
+      <div class="impact-combined-note">
+        <span>But not everyone feels it equally</span>
+        <p>Heat does not affect everyone equally. Students in under-resourced schools, outdoor workers, older adults, and households without reliable cooling face greater risks as hot days become more common.</p>
       </div>
     </div>
   `);
 
   container.transition()
-    .duration(420)
+    .duration(500)
     .style("opacity", 1);
 
   legendContainer
     .append("div")
     .attr("class", "legend-caption")
-    .text("Impact section: computed proxy plus context-only interpretation layers.");
+    .text("Impact section: outside-source examples paired with proxy/context interpretation.");
 }
 
 function addCenteredRollingAverage(rows, valueKey = "value", windowSize = 5) {
@@ -7143,11 +7085,12 @@ function getColorScale(metric, values) {
   }
 
   if (metric === "summer_hot_days_35c_change_from_observed_2020") {
-    return d3.scaleLinear()
-      .domain([0, 12.5, 25])
-      .range(["#fffaf2", "#f9b36c", "#990026"])
+    return d3.scaleSequential()
+      .domain([0, 25])
+      .interpolator(d3.interpolateYlOrRd)
       .clamp(true);
   }
+
 
   const maxValue = d3.max(values) || 1;
 
@@ -7183,24 +7126,12 @@ function drawLegend(color, metric) {
   const start = domain[0];
   const end = domain[domain.length - 1];
 
-  if (metric === "summer_hot_days_35c_change_from_observed_2020") {
-    [
-      { offset: "0%", color: "#fffaf2" },
-      { offset: "50%", color: "#f9b36c" },
-      { offset: "100%", color: "#990026" },
-    ].forEach((stop) => {
-      gradient.append("stop")
-        .attr("offset", stop.offset)
-        .attr("stop-color", stop.color);
-    });
-  } else {
-    d3.range(0, 1.01, 0.1).forEach((d) => {
-      const value = start + d * (end - start);
-      gradient.append("stop")
-        .attr("offset", `${d * 100}%`)
-        .attr("stop-color", color(value));
-    });
-  }
+  d3.range(0, 1.01, 0.1).forEach((d) => {
+    const value = start + d * (end - start);
+    gradient.append("stop")
+      .attr("offset", `${d * 100}%`)
+      .attr("stop-color", color(value));
+  });
 
   legend.append("rect")
     .attr("x", 8)

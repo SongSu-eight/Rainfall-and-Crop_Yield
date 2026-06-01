@@ -172,6 +172,11 @@ let mapAnimationTimer = null;
 let introCompleted = false;
 let introEvaluationTimer = null;
 let knownStateNames = [];
+
+const excludedSelectableStates = new Set(["Alaska", "Hawaii"]);
+function isSelectableStateName(stateName) {
+  return Boolean(stateName) && !excludedSelectableStates.has(normalizeStateName(stateName));
+}
 let stateChangeTimer = null;
 let stateChangeYearIndex = 0;
 let stateChangePaused = false;
@@ -350,7 +355,9 @@ function setupStatePicker() {
 
   const stateNames = Array.from(
     new Set(stateData.map((d) => normalizeStateName(d.state)))
-  ).sort(d3.ascending);
+  )
+    .filter(isSelectableStateName)
+    .sort(d3.ascending);
 
   statePicker
     .selectAll("option.state-option")
@@ -386,7 +393,7 @@ function setupIntroExpectation() {
     new Set([
       ...allMonthlyData.map((d) => normalizeStateName(d.state)),
       ...stateData.map((d) => normalizeStateName(d.state)),
-    ].filter(Boolean))
+    ].filter(isSelectableStateName))
   ).sort(d3.ascending);
 
   if (hometownStateInput.empty() || expectationTempInput.empty()) return;
@@ -436,8 +443,7 @@ function renderStateSuggestions(query) {
   if (stateSuggestions.empty()) return;
   const cleaned = normalizeStateName(query || "").toLowerCase();
   const matches = knownStateNames
-    .filter((name) => !cleaned || name.toLowerCase().includes(cleaned))
-    .slice(0, 5);
+    .filter((name) => !cleaned || name.toLowerCase().includes(cleaned));
 
   stateSuggestions
     .classed("is-open", Boolean(matches.length) && !introCompleted)
@@ -474,6 +480,13 @@ function trySubmitIntroExpectation() {
 function setupScrollGate() {
   const blockScroll = (event) => {
     if (introCompleted) return;
+
+    // Let the state dropdown scroll internally while the intro page itself is locked.
+    const suggestionsEl = document.querySelector("#state-suggestions");
+    if (suggestionsEl?.classList.contains("is-open") && suggestionsEl.contains(event.target)) {
+      return;
+    }
+
     const heroBottom = document.querySelector("#hero")?.getBoundingClientRect().bottom ?? 0;
     if (heroBottom <= 6) return;
     event.preventDefault();
